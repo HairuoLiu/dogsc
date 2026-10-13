@@ -41,6 +41,7 @@ struct RecorderSetupSurface: View {
             .firstUseTourTarget("recorder.save", in: .recorder, highlight: .rounded(22))
 
             recordButton.padding(.leading, 4)
+            RecorderDragGrip()
         }
         .padding(.horizontal, 8)
         .frame(height: 56)

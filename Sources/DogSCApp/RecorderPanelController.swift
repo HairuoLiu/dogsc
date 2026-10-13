@@ -666,7 +666,7 @@ enum RecorderPanelPolicy {
 final class RecorderPanelController: NSObject, NSWindowDelegate {
     private let model: AppModel
     private let panel: RecorderPanel
-    private let hostingController: NSHostingController<RecorderMainWindowRoot>
+    private let hostingView: RecorderHostingView<RecorderMainWindowRoot>
     private var hasPositionedPanel = false
     private var currentPhase: AppPhase
     private var selectionIsActive = false
@@ -685,7 +685,7 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
             recordsMicrophone: model.configuration.recordsMicrophone
         )
             ?? RecorderPanelPolicy.setupSize
-        hostingController = NSHostingController(
+        hostingView = RecorderHostingView(
             rootView: RecorderMainWindowRoot(model: model, phase: model.phase)
         )
         panel = RecorderPanel(
@@ -814,7 +814,7 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
                 context.allowsImplicitAnimation = false
                 panel.setFrame(destination, display: false, animate: false)
                 if phaseChanged {
-                    hostingController.rootView = RecorderMainWindowRoot(
+                    hostingView.rootView = RecorderMainWindowRoot(
                         model: model,
                         phase: phase,
                         onRecordingWidthChange: { [weak self] width in
@@ -888,21 +888,22 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
         RecorderPopoverPresenter.shared.dismiss()
         transition.hide(panel, animated: false)
         panel.setIslandInteractionView(nil)
-        panel.contentViewController = nil
+        panel.contentView = nil
         panel.close()
     }
 
     private func configurePanel(initialSize: NSSize) {
         panel.identifier = recorderMainWindowIdentifier
         panel.presentedPhase = currentPhase
-        panel.contentViewController = hostingController
+        hostingView.autoresizingMask = [.width, .height]
+        panel.contentView = hostingView
         panel.appearance = nil
         panel.isOpaque = false
         panel.backgroundColor = .clear
         // The island draws its own shadow so it can follow the morph.
         panel.hasShadow = false
-        hostingController.view.wantsLayer = true
-        hostingController.view.layer?.backgroundColor = NSColor.clear.cgColor
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
         panel.animationBehavior = .none
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false

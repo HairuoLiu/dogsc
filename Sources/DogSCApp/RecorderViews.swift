@@ -2,19 +2,16 @@ import AppKit
 import RecorderCore
 import SwiftUI
 
-// 全局视觉基线收口到同一套暖石墨硬件语言。不用蓝紫做界面强调，
-// 颜色优先表达录制、警告与时间线内容身份。
+// 全局表面跟随统一明暗外观；内容身份色与侧栏任务调色板同源。
 let appBackground = EditorTheme.backgroundDeep
 let panelBackground = EditorTheme.panelSurface
 let dividerColor = EditorTheme.hairline
-/// 全编辑器唯一交互强调色：米白。滑块、开关、选中态、主动作按钮共用。
+/// 中性控件的基础强调色；任务控件使用各自的 EditorConsole 调色板。
 let editorAccent = EditorTheme.platinumAccent
-/// 内容色：缩放/运镜片段的板岩蓝（不是界面强调色，只是该轨道的身份色）。
-let editorZoomClip = Color(red: 0.58, green: 0.48, blue: 0.34)
-let editorCameraSyncClip = Color(red: 0.34, green: 0.56, blue: 0.47)
-let editorOverlayClip = Color(red: 0.58, green: 0.37, blue: 0.31)
-/// 内容色：主片段的经典暖琥珀橙（Orange + White 标志性主片段风格）。
-let editorClipAmberTop = Color(red: 0.82, green: 0.56, blue: 0.22)
+/// 缩放／屏幕运镜片段的身份色。
+let editorZoomClip = EditorTheme.timelineZoomAccent
+let editorCameraSyncClip = EditorConsole.camera.fill
+let editorOverlayClip = EditorConsole.opening.fill
 
 func setupWindowWidth() -> CGFloat { 714 }
 func recordingWindowWidth(recordsMicrophone: Bool) -> CGFloat {
@@ -197,6 +194,7 @@ struct RecordingBar: View {
         HStack(spacing: 0) {
             recordingStatus
             recordingActions
+            RecorderDragGrip()
         }
         .padding(.leading, 16).padding(.trailing, 6)
         .frame(height: 48)

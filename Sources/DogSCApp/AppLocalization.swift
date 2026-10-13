@@ -11,6 +11,9 @@ final class AppLocalization: Observable, @unchecked Sendable {
     private struct Language {
         let identifier: String
         let bundle: Bundle
+        /// Resolved strings for this language. View bodies ask for the same
+        /// labels on every update (a timeline drag re-runs hundreds of them).
+        let cache = LocalizedStringCache()
         var locale: Locale { Locale(identifier: identifier) }
     }
 
@@ -35,7 +38,10 @@ final class AppLocalization: Observable, @unchecked Sendable {
     var locale: Locale { language.locale }
 
     func localizedString(_ key: String) -> String {
-        language.bundle.localizedString(forKey: key, value: key, table: nil)
+        let language = self.language
+        return language.cache.string(for: key) {
+            language.bundle.localizedString(forKey: key, value: key, table: nil)
+        }
     }
 
     @MainActor
@@ -138,4 +144,16 @@ private final class AppWindowLocalization: NSObject {
 func appLocalizeWindowTitle(_ window: NSWindow, _ key: String,
                             prefix: String? = nil, arguments: [String] = []) {
     AppWindowLocalization.shared.setTitle(of: window, key: key, prefix: prefix, arguments: arguments)
+}
+
+final class LocalizedStringCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: String] = [:]
+
+    func string(for key: String, resolve: () -> String) -> String {
+        if let hit = lock.withLock({ values[key] }) { return hit }
+        let value = resolve()
+        lock.withLock { values[key] = value }
+        return value
+    }
 }
