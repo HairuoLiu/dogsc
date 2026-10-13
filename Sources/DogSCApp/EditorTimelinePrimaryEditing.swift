@@ -589,12 +589,10 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
         let intent = EditorTimelineGestureIntent.primaryTrim(segment.id, edge)
         return EditorTrimGrip(
                 color: EditorConsole.frame.text,
-                height: min(max(primaryVideoHeight - 20, 24), 44)
+                height: min(max(primaryVideoHeight * 0.3, 12), 20)
             )
-            // Filmstrip colours are arbitrary. Give the identity-coloured
-            // grip an opaque neutral backing so even blue/white footage
-            // cannot hide a trim endpoint.
-            .background(EditorTheme.panelRaised, in: Capsule())
+            // The compact grip owns its backing. Keep the existing full-height
+            // hit area without drawing a tall capsule over the recording.
             .frame(width: 12, height: primaryVideoHeight)
             .contentShape(Rectangle())
             .highPriorityGesture(
@@ -832,22 +830,32 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
 
     func splitPrimarySegmentAtPlayhead() {
         guard primarySplitCandidate != nil else { return }
-        let splitTime = primarySplitTime
+        performPrimarySplit(at: primarySplitTime)
+    }
+
+    /// A cut changes ownership, not the position of the retained pictures.
+    /// Commit both pieces and the right-hand selection atomically, preventing
+    /// lane membership/selection animations from shrinking and sliding them.
+    /// Both retained pieces remain visible at their original hit areas.
+    private func performPrimarySplit(at splitTime: TimeInterval) {
         let rightID = UUID()
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
         do {
-            try editorStore.splitPrimarySegment(
-                atOutputTime: splitTime,
-                fullSourceDuration: fullSourceDuration,
-                newRightSegmentID: rightID,
-                actionName: "分割主片段"
-            )
+            try withTransaction(transaction) {
+                try editorStore.splitPrimarySegment(
+                    atOutputTime: splitTime,
+                    fullSourceDuration: fullSourceDuration,
+                    newRightSegmentID: rightID,
+                    actionName: "分割主片段"
+                )
+                hoveredPrimarySegmentID = nil
+                selectPrimarySegment(rightID)
+                seekTimeline(to: min(splitTime, timelineDuration))
+            }
         } catch {
             onError(error.localizedDescription)
-            return
         }
-        hoveredPrimarySegmentID = nil
-        selectPrimarySegment(rightID)
-        seekTimeline(to: min(splitTime, timelineDuration))
     }
 
     /// Option+单击快捷切分：按点击位置的比例换算输出时间，与剪刀按钮同一条
@@ -885,21 +893,7 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
         )
         guard outputTime > segment.outputStart + minimumPrimarySegmentDuration,
               outputTime < segment.outputEnd - minimumPrimarySegmentDuration else { return }
-        let rightID = UUID()
-        do {
-            try editorStore.splitPrimarySegment(
-                atOutputTime: outputTime,
-                fullSourceDuration: fullSourceDuration,
-                newRightSegmentID: rightID,
-                actionName: "分割主片段"
-            )
-        } catch {
-            onError(error.localizedDescription)
-            return
-        }
-        hoveredPrimarySegmentID = nil
-        selectPrimarySegment(rightID)
-        seekTimeline(to: outputTime)
+        performPrimarySplit(at: outputTime)
     }
 
     func movePrimarySegment(_ draggedID: UUID, toIndex destination: Int) {

@@ -836,8 +836,6 @@ struct EditorTimelineView: View {
     @State var isTimelineTrackManagerPresented = false
     /// The track-name column can fold to icons for more timeline width.
     @AppStorage("editor.timeline.labelsCollapsed") var timelineLabelsCollapsed = false
-    /// The last cut, flashed once along the lanes so a split is felt.
-    @State var splitFlash: EditorSplitFlash?
     @State var timelineHoverLocation = EditorTimelineHoverLocation()
     // Only an explicit Option-cut target needs to update the ruler's controls.
     @State var hoveredTimelineCutPoint: CGPoint?

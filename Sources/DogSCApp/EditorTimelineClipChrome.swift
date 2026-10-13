@@ -33,7 +33,7 @@ enum EditorTimelineClipEmphasis: Equatable {
         case .idle: 0.65
         case .hovered: 0.9
         case .selected: 1.45
-        case .editing: 2
+        case .editing: 1.5
         }
     }
 
@@ -49,7 +49,7 @@ enum EditorTimelineClipEmphasis: Equatable {
         case .idle: 0.20
         case .hovered: 0.26
         case .selected: 0.32
-        // Editing uses the stronger outline/lift, keeping its wash within
+        // Editing uses the outline/drag feedback, keeping its wash within
         // the contrast budget of small labels and trim handles in both themes.
         case .editing: 0.32
         }
@@ -57,21 +57,6 @@ enum EditorTimelineClipEmphasis: Equatable {
 
     var showsHandles: Bool { self != .idle }
 
-    var shadowOpacity: Double {
-        switch self {
-        case .idle, .hovered: 0
-        case .selected: 0.055
-        case .editing: 0.09
-        }
-    }
-
-    var shadowRadius: CGFloat {
-        switch self {
-        case .idle, .hovered: 0
-        case .selected: 3
-        case .editing: 6
-        }
-    }
 }
 
 extension EditorConsolePalette {
@@ -84,9 +69,8 @@ extension EditorConsolePalette {
 }
 
 extension View {
-    /// `tint` is the clip's identity colour. A selected zoom clip glows in
-    /// its own amber instead of being outlined in black ink; clips without
-    /// an identity (screen recording) keep the neutral ink ring.
+    /// `tint` is the clip's identity colour. A single flat outline indicates
+    /// selection without glow, shadows or any drawing outside the clip.
     /// `selectionRing` colours only the selected/editing outline of a clip
     /// whose body keeps a neutral look (the screen recording, overlays), so
     /// an idle clip stays quiet and a selected one is never plain black.
@@ -102,21 +86,14 @@ extension View {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(
                     active ? ring : (tint ?? EditorTheme.chrome()),
-                    lineWidth: active ? (emphasis == .editing ? 2 : 1.5) : 0.75
+                    lineWidth: active ? 1.5 : 0.75
                 )
-                // Animate only the ink. Animating the whole clip here also
-                // springs its new bounds when a split, trim or drop changes
-                // geometry in the same update as selection/emphasis.
+                // Only the ink fades; geometry and media stay at their exact
+                // edit positions, including selection changes during a cut.
                 .animation(.easeOut(duration: 0.14)) { border in
                     border.opacity(active ? 1 : emphasis == .hovered ? 0.55 : (tint == nil ? 0.08 : 0.3))
                 }
                 .allowsHitTesting(false)
         }
-        .shadow(
-            color: (tint ?? selectionRing ?? .black).opacity(active ? (tint == nil ? (selectionRing == nil ? 0.18 : 0.3) : 0.35) : 0),
-            radius: active ? 6 : 0,
-            y: tint == nil ? 1 : 0
-        )
-        .animation(.easeOut(duration: 0.16), value: emphasis)
     }
 }

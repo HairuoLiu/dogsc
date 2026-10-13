@@ -35,8 +35,8 @@ extension View {
     }
 }
 
-/// A clip's trim grip: a short bar in the clip's colour that grows under
-/// the pointer and shows the resize cursor.
+/// A small inlaid trim grip. Hover changes its ink, never its dimensions;
+/// the wider invisible hit target keeps the endpoint easy to grab.
 struct EditorTrimGrip: View {
     let color: Color
     let height: CGFloat
@@ -45,8 +45,12 @@ struct EditorTrimGrip: View {
     var body: some View {
         Capsule(style: .continuous)
             .fill(color)
-            .frame(width: hovered ? 5 : 3, height: hovered ? height + 6 : height)
-            .animation(SpringMotion.hover, value: hovered)
+            .frame(width: 2, height: height)
+            .animation(.easeOut(duration: 0.12)) { grip in
+                grip.opacity(hovered ? 1 : 0.75)
+            }
+            .padding(1)
+            .background(EditorTheme.panelRaised, in: Capsule())
             .frame(width: 12)
             .contentShape(Rectangle())
             .onHover { hovered = $0 }
@@ -80,32 +84,23 @@ struct EditorCanvasHandle: View {
 
 // MARK: - Clip motion on the timeline
 
-extension AnyTransition {
-    /// A clip that is created grows out of its own centre; one that is
-    /// deleted shrinks away while its neighbours close the gap.
-    static var editorClip: AnyTransition {
-        guard !RecorderMotion.reduces else { return .opacity }
-        return .asymmetric(
-            insertion: .scale(scale: 0.4, anchor: .center).combined(with: .opacity),
-            removal: .scale(scale: 0.85, anchor: .center).combined(with: .opacity)
-        )
-    }
-}
-
 extension View {
-    /// A clip being moved is picked up: slightly larger, with a soft shadow,
-    /// and set down again with a little spring when released.
-    func editorClipLift(_ lifted: Bool, scales: Bool = true) -> some View {
-        scaleEffect(scales && lifted && !RecorderMotion.reduces ? 1.05 : 1)
-            .shadow(color: .black.opacity(lifted ? 0.26 : 0), radius: lifted ? 8 : 0, y: lifted ? 4 : 0)
-            .animation(.spring(response: 0.3, dampingFraction: lifted ? 0.8 : 0.62), value: lifted)
+    /// Visual edges must remain at the authored times during move/snap/trim.
+    /// Fade only the ink: a centre-anchored scale moves both endpoints away
+    /// from the snapping guide and a drag shadow spills into the next lane.
+    func editorClipDragFeedback(_ dragged: Bool) -> some View {
+        animation(RecorderMotion.reduces ? nil : .easeOut(duration: 0.12)) { clip in
+            clip.opacity(dragged ? 0.9 : 1)
+        }
     }
 
-    /// Animates a lane only when its set of clips changes (add, delete,
-    /// split, undo): neighbours slide into their new places. Moves and drags
-    /// keep the same set, so they stay exactly under the pointer.
-    func editorClipMembership<ID: Hashable>(_ ids: Set<ID>) -> some View {
-        animation(RecorderMotion.reduces ? nil : .spring(response: 0.38, dampingFraction: 0.86), value: ids)
+    /// Add, split, delete and undo update at the authored positions. Do not
+    /// inherit an ancestor's layout animation into clip bounds or offsets;
+    /// local ink/hover and film/waveform animations can still run separately.
+    func editorTimelineEdits() -> some View {
+        transaction { transaction in
+            transaction.animation = nil
+        }
     }
 }
 

@@ -247,7 +247,6 @@ extension EditorTimelineView {
                 }
             }
             .padding(.vertical, 10)
-            .editorClipMembership(Set(rows.flatMap { $0.map(\.id) }))
             if let range = overlayCreateRange, range.upperBound - range.lowerBound > 0.01 {
                 RoundedRectangle(cornerRadius: 7)
                     .fill(editorOverlayClip.opacity(0.18))
@@ -324,10 +323,10 @@ extension EditorTimelineView {
                     .editorTimelineClipChrome(cornerRadius: 7, emphasis: emphasis, tint: EditorConsole.opening.text)
                     .contentShape(Rectangle())
                 .frame(width: clipWidth, height: 30)
-                .editorClipLift(overlayTimelineDrag?.id == clip.id && overlayTimelineDrag?.kind == clip.kind
+                .editorClipDragFeedback(overlayTimelineDrag?.id == clip.id && overlayTimelineDrag?.kind == clip.kind
                     && overlayTimelineDrag?.mode == .move)
                 .offset(x: x)
-                .transition(.editorClip)
+                .transition(.identity)
                 .zIndex(emphasis == .editing ? 4 : isSelected ? 3 : isHovered ? 1 : 0)
                 .onHover { hovering in
                     if hovering {
@@ -429,9 +428,7 @@ extension EditorTimelineView {
                     var timeline = editorStore.project.timeline
                     timeline.mosaicClips.append(clip)
                     do {
-                        try withAnimation(SpringMotion.fluid) {
-                            try editorStore.replaceTimeline(with: timeline, actionName: "添加柔化")
-                        }
+                        try editorStore.replaceTimeline(with: timeline, actionName: "添加柔化")
                         activateTimelineSelection(.mosaic(clip.id))
                     } catch { onError(error.localizedDescription) }
                     return

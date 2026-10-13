@@ -92,9 +92,9 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
                     }
                 }
                 .frame(width: segmentWidth, height: zoomBarHeight)
-                .editorClipLift(zoomTrackDrag == .move(segment.id))
+                .editorClipDragFeedback(zoomTrackDrag == .move(segment.id))
                 .offset(x: startX)
-                .transition(.editorClip)
+                .transition(.identity)
                 .zIndex(emphasis == .editing ? 4 : isSelected ? 3 : isHovered ? 1 : 0)
                 .contentShape(Rectangle())
                 .contextMenu {
@@ -311,11 +311,9 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
                         duration: duration
                     )
                     playbackController.pause()
-                    withAnimation(SpringMotion.fluid) {
-                        createZoomRange(start: start,
-                            end: isDrawnRange ? (createEnd ?? start) : start + 3,
-                            duration: duration)
-                    }
+                    createZoomRange(start: start,
+                        end: isDrawnRange ? (createEnd ?? start) : start + 3,
+                        duration: duration)
                     endTimelineGesture(.zoomCreate)
                 case let .move(id):
                     let intent = EditorTimelineGestureIntent.zoomMove(id)
@@ -675,16 +673,6 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
 
     func splitCurrentTimelineSelectionAtPlayhead() {
         let time = effectiveTimelineEditTime
-        let before = editorStore.project
-        defer {
-            if editorStore.project != before {
-                splitFlash = EditorSplitFlash(
-                    id: (splitFlash?.id ?? 0) + 1,
-                    time: time,
-                    color: (editorStore.selection.map { EditorConsole.palette(for: $0) } ?? EditorConsole.frame).fill
-                )
-            }
-        }
         switch EditorTimelineSplitTarget(selection: editorStore.selection) {
         case let .zoom(id):
             splitZoomAnimation(id: id, at: time)

@@ -452,16 +452,17 @@ extension EditorTimelineView {
                 timelineRuler(width: width, duration: duration, cutX: cutX)
                     .timelineRowDivider(strong: true)
                 mainClipTimeline(width: width, duration: duration)
-                    .editorClipMembership(Set(primaryDisplaySegments.map(\.id)))
+                    .editorTimelineEdits()
                     .timelineRowDivider()
                 if showsCameraSyncTimeline {
                     cameraSyncTimeline(width: width, duration: duration)
+                        .editorTimelineEdits()
                         .timelineRowDivider()
                         .transition(.timelineLane)
                 }
                 if showsZoomTimeline {
                     zoomTimeline(width: width, duration: duration)
-                        .editorClipMembership(Set(timelineZoomSegments.map(\.id)))
+                        .editorTimelineEdits()
                         .timelineRowDivider()
                         .transition(.timelineLane)
                 }
@@ -472,7 +473,7 @@ extension EditorTimelineView {
                         width: width,
                         duration: duration
                     )
-                    .editorClipMembership(Set(screenMotionTimelineClips.map(\.id)))
+                    .editorTimelineEdits()
                     .timelineRowDivider()
                     .transition(.timelineLane)
                 }
@@ -483,22 +484,15 @@ extension EditorTimelineView {
                         width: width,
                         duration: duration
                     )
-                    .editorClipMembership(Set(cameraMotionTimelineClips.map(\.id)))
+                    .editorTimelineEdits()
                     .timelineRowDivider()
                     .transition(.timelineLane)
                 }
                 if showsOverlayTimeline {
                     combinedOverlayTimeline(width: width, duration: duration)
+                        .editorTimelineEdits()
                         .transition(.timelineLane)
                 }
-            }
-
-            if let splitFlash {
-                EditorSplitFlashView(color: splitFlash.color, height: timelineCanvasHeight)
-                    .id(splitFlash.id)
-                    .offset(x: CGFloat(splitFlash.time / max(duration, 0.001)) * width - 15)
-                    .allowsHitTesting(false)
-                    .zIndex(32)
             }
 
             NativeTimelinePlayheadView(
@@ -954,9 +948,8 @@ extension EditorTimelineView {
                 ? primaryFloatingTranslation(width: laneWidth, duration: duration)
                 : 0)
         )
-        .opacity(draggedPrimarySegmentID == segment.id ? 0.9 : 1)
-        .editorClipLift(draggedPrimarySegmentID == segment.id, scales: false)
-        .transition(.editorClip)
+        .editorClipDragFeedback(draggedPrimarySegmentID == segment.id)
+        .transition(.identity)
         .zIndex(
             draggedPrimarySegmentID == segment.id
                 ? 10

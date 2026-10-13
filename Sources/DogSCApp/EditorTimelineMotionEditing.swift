@@ -114,9 +114,9 @@ var screenMotionTimelineClips: [EditorMotionTimelineClip] {
                     }
                 }
                 .frame(width: clipWidth, height: 36)
-                .editorClipLift(motionTrackDrag == .move(clip.id) && motionGestureOrigin?.clip.track == clip.track)
+                .editorClipDragFeedback(motionTrackDrag == .move(clip.id) && motionGestureOrigin?.clip.track == clip.track)
                 .offset(x: startX)
-                .transition(.editorClip)
+                .transition(.identity)
                 .zIndex(emphasis == .editing ? 4 : selected ? 3 : hovered ? 1 : 0)
                 .contentShape(Rectangle())
                 .contextMenu {
@@ -377,9 +377,7 @@ var screenMotionTimelineClips: [EditorMotionTimelineClip] {
                         requested.end = requested.start + 3
                     }
                     playbackController.pause()
-                    withAnimation(SpringMotion.fluid) {
-                        createManualMotionClip(drag: requested, duration: duration)
-                    }
+                    createManualMotionClip(drag: requested, duration: duration)
                     endTimelineGesture(.motionCreate(track))
                 case let .move(id):
                     let intent = EditorTimelineGestureIntent.motion(

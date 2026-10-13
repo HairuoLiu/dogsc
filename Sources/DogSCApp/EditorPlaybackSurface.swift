@@ -187,6 +187,7 @@ struct NativeTimelinePlayheadView: NSViewRepresentable {
 final class NativeTimelinePlayheadNSView: NSView {
     private weak var playbackController: EditorPlaybackController?
     private var duration: TimeInterval = 0
+    private let lineRimLayer = CALayer()
     private let lineLayer = CALayer()
     private let knobLayer = CAShapeLayer()
     private var part: NativeTimelinePlayheadPart = .line
@@ -203,7 +204,6 @@ final class NativeTimelinePlayheadNSView: NSView {
         CATransaction.setAnimationDuration(RecorderMotion.reduces ? 0 : 0.18)
         CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1.15))
         knobLayer.setAffineTransform(emphasized ? CGAffineTransform(scaleX: 1.25, y: 1.25) : .identity)
-        knobLayer.shadowOpacity = emphasized ? 0.35 : 0
         CATransaction.commit()
     }
 
@@ -213,10 +213,6 @@ final class NativeTimelinePlayheadNSView: NSView {
         // A slim capsule handle reads as a grip on the time axis rather than
         // a dot; the paper rim separates it from clips passing underneath.
         knobLayer.lineWidth = 1.5
-        knobLayer.shadowColor = EditorPlayheadColor.line.cgColor
-        knobLayer.shadowRadius = 5
-        knobLayer.shadowOffset = .zero
-        knobLayer.shadowOpacity = 0
         knobLayer.path = CGPath(
             roundedRect: CGRect(x: 0, y: 0, width: 11, height: 17),
             cornerWidth: 5.5, cornerHeight: 5.5, transform: nil
@@ -225,15 +221,9 @@ final class NativeTimelinePlayheadNSView: NSView {
         // frame while a scale transform is active changes bounds underneath
         // the fixed path, leaving the grip off-centre after a seek.
         knobLayer.bounds = CGRect(x: 0, y: 0, width: 11, height: 17)
-        knobLayer.shadowColor = NSColor.black.cgColor
-        knobLayer.shadowOpacity = 0.26
-        knobLayer.shadowRadius = 3
-        knobLayer.shadowOffset = CGSize(width: 0, height: -1.5)
-        // A faint halo keeps the line legible over bright thumbnails without
-        // thickening it. The explicit path keeps the shadow cheap per frame.
-        lineLayer.shadowOpacity = 0.28
-        lineLayer.shadowRadius = 2.5
-        lineLayer.shadowOffset = .zero
+        // A solid, narrow rim separates the red line from media without a
+        // moving blur/shadow surface crossing the clip's selection glow.
+        layer?.addSublayer(lineRimLayer)
         layer?.addSublayer(lineLayer)
         layer?.addSublayer(knobLayer)
         updateAppearanceColors()
@@ -247,14 +237,17 @@ final class NativeTimelinePlayheadNSView: NSView {
     }
 
     private func updateAppearanceColors() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         effectiveAppearance.performAsCurrentDrawingAppearance {
             // A red current-time line, as in most editors: it is the one
             // colour no lane uses, so it reads on every track.
             lineLayer.backgroundColor = EditorPlayheadColor.line.cgColor
-            lineLayer.shadowColor = NSColor.windowBackgroundColor.cgColor
+            lineRimLayer.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.6).cgColor
             knobLayer.fillColor = EditorPlayheadColor.line.cgColor
             knobLayer.strokeColor = NSColor.windowBackgroundColor.cgColor
         }
+        CATransaction.commit()
     }
 
     override func layout() {
@@ -328,14 +321,13 @@ final class NativeTimelinePlayheadNSView: NSView {
         let viewportWidth = visible?.width ?? max(bounds.width - leadingInset, 0)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        lineRimLayer.isHidden = part != .line
         lineLayer.isHidden = part != .line
         // An offscreen playhead must disappear, never stick to a viewport edge.
         knobLayer.isHidden = part != .knob || knobX < leadingInset
             || knobX > leadingInset + viewportWidth
         lineLayer.frame = CGRect(x: lineX - 0.75, y: 0, width: 1.5, height: bounds.height)
-        if lineLayer.shadowPath?.boundingBox.height != bounds.height {
-            lineLayer.shadowPath = CGPath(rect: CGRect(x: 0, y: 0, width: 1.5, height: bounds.height), transform: nil)
-        }
+        lineRimLayer.frame = CGRect(x: lineX - 1.75, y: 0, width: 3.5, height: bounds.height)
         knobLayer.position = CGPoint(x: knobX, y: bounds.height - 12.5)
         CATransaction.commit()
     }
