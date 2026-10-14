@@ -94,17 +94,17 @@ extension EditorView {
                             } label: {
                                 HStack(spacing: 10) {
                                     EditorSymbol("rectangle.3.group", size: 14)
-                                        .foregroundStyle(preset.id == activeStylePresetID ? EditorConsole.frame.stroke : EditorTheme.secondaryText)
+                                        .foregroundStyle(preset.id == activeStylePresetID ? EditorTheme.primaryText : EditorTheme.secondaryText)
                                         .frame(width: 28, height: 28)
                                         .background(
-                                            preset.id == activeStylePresetID ? EditorConsole.frame.soft : EditorTheme.chrome(0.06),
+                                            preset.id == activeStylePresetID ? EditorTheme.selectionWash : EditorTheme.chrome(0.06),
                                             in: RoundedRectangle(cornerRadius: EditorInterfaceRadius.compact, style: .continuous)
                                         )
                                         .accessibilityHidden(true)
                                     Text(preset.name).lineLimit(1).truncationMode(.middle)
                                     Spacer(minLength: 8)
                                     if preset.id == activeStylePresetID {
-                                        EditorSymbol("checkmark", size: 14).foregroundStyle(EditorConsole.frame.stroke)
+                                        EditorSymbol("checkmark", size: 14).foregroundStyle(EditorTheme.primaryText)
                                             .accessibilityHidden(true)
                                     }
                                 }.font(.appUI(size: 13, weight: .medium))
@@ -137,7 +137,7 @@ extension EditorView {
                                     in: RoundedRectangle(cornerRadius: EditorInterfaceRadius.group, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: EditorInterfaceRadius.group, style: .continuous)
-                                .strokeBorder(EditorConsole.frame.stroke.opacity(preset.id == activeStylePresetID ? 1 : 0), lineWidth: 1.5)
+                                .strokeBorder(EditorTheme.platinumAccent.opacity(preset.id == activeStylePresetID ? 1 : 0), lineWidth: 1.5)
                                 .allowsHitTesting(false)
                         }
                     }

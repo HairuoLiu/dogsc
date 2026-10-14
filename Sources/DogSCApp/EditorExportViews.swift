@@ -523,7 +523,7 @@ struct ExportSheet: View {
                         Spacer()
                         Text("\(Int((progress * 100).rounded()))%")
                             .font(.system(.caption, design: .monospaced).weight(.semibold))
-                            .foregroundStyle(EditorConsole.frame.text)
+                            .foregroundStyle(EditorTheme.primaryText)
                             .contentTransition(.numericText())
                     }
 
@@ -533,7 +533,7 @@ struct ExportSheet: View {
                                 .fill(EditorTheme.controlWell)
 
                             Capsule(style: .continuous)
-                                .fill(EditorConsole.frame.fill)
+                                .fill(EditorTheme.platinumAccent)
                                 .frame(
                                     width: progress > 0
                                         ? max(proxy.size.width * CGFloat(progress), 8)

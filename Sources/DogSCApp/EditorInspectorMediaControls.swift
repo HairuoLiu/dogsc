@@ -372,7 +372,7 @@ extension EditorInspectorView {
                 icon: cameraSyncIsUnmodified
                     ? "checkmark.circle.fill"
                     : "waveform.path.ecg",
-                iconTint: cameraSyncIsUnmodified ? Color.green : EditorConsole.camera.stroke,
+                iconTint: cameraSyncIsUnmodified ? EditorConsole.frame.stroke : EditorConsole.camera.stroke,
                 expanded: $isCameraSyncEditing,
                 accessibilityHint: isCameraSyncEditing ? "收起校正设置" : "展开校正设置"
             ) {
@@ -868,7 +868,7 @@ extension EditorInspectorView {
             }
             .frame(width: 34, height: 34)
             Circle()
-                .fill(RecorderStyle.mint)
+                .fill(EditorConsole.audio.fill)
                 .frame(width: 7, height: 7)
                 .overlay { Circle().strokeBorder(EditorTheme.cardElevated, lineWidth: 1.5) }
                 .opacity(live ? 1 : 0)

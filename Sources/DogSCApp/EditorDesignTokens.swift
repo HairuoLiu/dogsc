@@ -84,10 +84,10 @@ public enum EditorTheme {
     )
     // The zoom lane uses the 运镜 task colour: a light wash, the hue for
     // rings and handles, and the deep shade (or the hue in dark) for text.
-    public static let timelineZoomSurface = EditorConsole.zoom.soft
+    public static let timelineZoomSurface = EditorConsole.Track.zoom.soft
     /// The zoom identity at full strength: selection rings and handles.
-    static let timelineZoomAccent = EditorConsole.zoom.stroke
-    static let timelineZoomInk = EditorConsole.zoom.softInk
+    static let timelineZoomAccent = EditorConsole.Track.zoom.stroke
+    static let timelineZoomInk = EditorConsole.Track.zoom.softInk
     public static let recorderSurface = panelSurface
     public static let mediaAccent = Color(red: 0.949, green: 0.941, blue: 0.918)
 
@@ -109,8 +109,8 @@ public enum EditorTheme {
         dark: NSColor(calibratedWhite: 1.0, alpha: 0.06)
     )
     public static let amberAccent = Color(red: 0.95, green: 0.68, blue: 0.28)
-    /// Same mint as the recorder: something is live or on.
-    public static let success = Color(red: 0.30, green: 0.85, blue: 0.55)
+    /// Warm botanical green aligned with the editor's lime family.
+    public static let success = Color(red: 0.52, green: 0.82, blue: 0.26)
     public static let recording = Color(red: 1.0, green: 0.27, blue: 0.23)
 
     public static let selectionTint = platinumAccent

@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/editor.png" alt="DogSC 编辑器：实时预览、画面设置与多轨时间线">
+  <img src="docs/images/editor.png" alt="DogSC 编辑器：画面预览、背景设置与多轨时间线">
 </p>
 
 ## 功能
@@ -64,7 +64,7 @@
 </table>
 
 <p align="center">
-  <img src="docs/images/motion.png" alt="DogSC 运镜：缩放曲线与时间线上的缩放片段">
+  <img src="docs/images/motion.png" alt="DogSC 运镜：缩放焦点、曲线与时间线片段">
 </p>
 
 ## 小技巧

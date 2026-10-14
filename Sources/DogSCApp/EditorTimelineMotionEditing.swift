@@ -100,7 +100,7 @@ var screenMotionTimelineClips: [EditorMotionTimelineClip] {
                                 .padding(.horizontal, 9)
                             }
                         }
-                        .editorTimelineClipChrome(cornerRadius: 6, emphasis: emphasis, tint: motionTrackPalette(track).text)
+                        .editorTimelineClipChrome(cornerRadius: 6, emphasis: emphasis, tint: motionTrackPalette(track).stroke)
 
                     if emphasis.showsHandles {
                         HStack(spacing: 0) {
@@ -183,7 +183,7 @@ var screenMotionTimelineClips: [EditorMotionTimelineClip] {
                     .fill(motionTrackPalette(track).timelineSurface(.hovered))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(motionTrackPalette(track).text, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                            .stroke(motionTrackPalette(track).stroke, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     )
                     .frame(width: rangeWidth, height: 36)
                     .offset(x: startX)
@@ -228,15 +228,15 @@ var screenMotionTimelineClips: [EditorMotionTimelineClip] {
 
     func motionResizeHandle(leading: Bool, track: EditorMotionTimelineTrack) -> some View {
         Capsule(style: .continuous)
-            .fill(motionTrackPalette(track).text)
+            .fill(motionTrackPalette(track).stroke)
             .frame(width: 3, height: 14)
             .accessibilityLabel(appLocalized(leading ? "调整动画开始" : "调整动画结束"))
     }
 
     func motionTrackPalette(_ track: EditorMotionTimelineTrack) -> EditorConsolePalette {
         switch track {
-        case .screen: EditorConsole.zoom
-        case .camera: EditorConsole.camera
+        case .screen: EditorConsole.Track.screenMotion
+        case .camera: EditorConsole.Track.cameraMotion
         }
     }
 

@@ -44,14 +44,33 @@ enum EditorTimelineClipEmphasis: Equatable {
         }
     }
 
-    var fillOpacity: Double {
+    /// Track-colour wash for effect clips (light appearance).
+    var trackLightFillOpacity: Double {
         switch self {
-        case .idle: 0.20
-        case .hovered: 0.26
-        case .selected: 0.32
-        // Editing uses the outline/drag feedback, keeping its wash within
-        // the contrast budget of small labels and trim handles in both themes.
-        case .editing: 0.32
+        case .idle: 0.26
+        case .hovered: 0.34
+        case .selected: 0.46
+        case .editing: 0.50
+        }
+    }
+
+    /// Track-colour wash for effect clips (dark appearance).
+    var trackDarkFillOpacity: Double {
+        switch self {
+        case .idle: 0.22
+        case .hovered: 0.30
+        case .selected: 0.40
+        case .editing: 0.44
+        }
+    }
+
+    /// The primary recording card stays neutral graphite.
+    var primaryNeutralFillOpacity: Double {
+        switch self {
+        case .idle: 0.035
+        case .hovered: 0.05
+        case .selected: 0.065
+        case .editing: 0.07
         }
     }
 
@@ -60,20 +79,28 @@ enum EditorTimelineClipEmphasis: Equatable {
 }
 
 extension EditorConsolePalette {
-    /// Every clip shares the sidebar task's hue and the same emphasis levels.
-    /// `softInk` carries text; the deeper adaptive `text` carries trim handles
-    /// on the wash (the sidebar's `stroke` is intended for a neutral panel).
+    /// Effect clips (`缩放`, `屏幕 3D`, `摄像运动`, `叠加`) wear their track's
+    /// colour: the track icon, every clip in that row, its outline, handles
+    /// and label share one hue, so a row reads as one track at a glance.
     func timelineSurface(_ emphasis: EditorTimelineClipEmphasis) -> Color {
-        fill.opacity(emphasis.fillOpacity)
+        adaptiveWash(
+            lightAlpha: emphasis.trackLightFillOpacity,
+            darkAlpha: emphasis.trackDarkFillOpacity
+        )
+    }
+
+    /// The primary recording card (`屏幕录制`) is neutral: the filmstrip and
+    /// waveform are the content, and black is the editor's primary colour.
+    func primaryTimelineSurface(_ emphasis: EditorTimelineClipEmphasis) -> Color {
+        EditorTheme.chrome(emphasis.primaryNeutralFillOpacity)
     }
 }
 
 extension View {
-    /// `tint` is the clip's identity colour. A single flat outline indicates
-    /// selection without glow, shadows or any drawing outside the clip.
-    /// `selectionRing` colours only the selected/editing outline of a clip
-    /// whose body keeps a neutral look (the screen recording, overlays), so
-    /// an idle clip stays quiet and a selected one is never plain black.
+    /// `tint` is the track colour: a soft same-hue outline at rest and a
+    /// solid 1.5pt ring when selected. Without a tint (the neutral recording
+    /// clip) the rest outline is a graphite hairline and `selectionRing`
+    /// colours only the selected ring. No glow or drawing outside the clip.
     func editorTimelineClipChrome(
         cornerRadius: CGFloat,
         emphasis: EditorTimelineClipEmphasis,
@@ -82,6 +109,9 @@ extension View {
     ) -> some View {
         let ring = tint ?? selectionRing ?? EditorTheme.selectionTint
         let active = emphasis == .selected || emphasis == .editing
+        let restOpacity = tint == nil
+            ? (emphasis == .hovered ? 0.2 : 0.1)
+            : (emphasis == .hovered ? 0.7 : 0.45)
         return overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(
@@ -91,7 +121,7 @@ extension View {
                 // Only the ink fades; geometry and media stay at their exact
                 // edit positions, including selection changes during a cut.
                 .animation(.easeOut(duration: 0.14)) { border in
-                    border.opacity(active ? 1 : emphasis == .hovered ? 0.55 : (tint == nil ? 0.08 : 0.3))
+                    border.opacity(active ? 1 : restOpacity)
                 }
                 .allowsHitTesting(false)
         }

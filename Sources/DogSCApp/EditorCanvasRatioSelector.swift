@@ -84,7 +84,6 @@ struct EditorCanvasRatioSelector: View {
             controls
         }
         .padding(16).frame(width: 320)
-        .environment(\.consolePalette, EditorConsole.frame)
         .animation(SpringMotion.fluid, value: editingCustom)
     }
 
@@ -168,19 +167,17 @@ struct EditorCanvasRatioSelector: View {
                 Text(appLocalized(ratio == .cinema ? "电影" : ratio.rawValue))
                     .font(.appUI(size: 12, weight: selected ? .medium : .regular)).lineLimit(1)
             }
-            .foregroundStyle(selected ? EditorConsole.frame.softInk : EditorTheme.primaryText)
+            .foregroundStyle(EditorTheme.primaryText)
             .frame(maxWidth: .infinity).frame(height: 68)
             .background {
-                // The chosen ratio is washed in the 画面 colour and ringed in
-                // it; the others are plain tiles without outlines.
                 RoundedRectangle(cornerRadius: EditorInterfaceRadius.control, style: .continuous)
                     .fill(EditorTheme.cardFill)
                 if selected {
                     RoundedRectangle(cornerRadius: EditorInterfaceRadius.control, style: .continuous)
-                        .fill(EditorConsole.frame.soft)
+                        .fill(EditorTheme.selectionWash)
                         .overlay {
                             RoundedRectangle(cornerRadius: EditorInterfaceRadius.control, style: .continuous)
-                                .strokeBorder(EditorConsole.frame.stroke, lineWidth: 1.5)
+                                .strokeBorder(EditorTheme.platinumAccent, lineWidth: 1.5)
                         }
                         .matchedGeometryEffect(id: "ratio", in: highlight)
                 }
@@ -200,11 +197,11 @@ struct EditorCanvasRatioSelector: View {
         } label: {
             EditorSymbolLabel(appLocalized(title), systemImage: symbol)
                 .font(.appUI(size: 12, weight: .medium))
-                .foregroundStyle(portrait == isPortrait ? EditorConsole.frame.ink : EditorTheme.secondaryText)
+                .foregroundStyle(portrait == isPortrait ? EditorTheme.primaryText : EditorTheme.secondaryText)
                 .frame(maxWidth: .infinity).frame(height: EditorInterfaceHeight.selection)
                 .background {
                     if portrait == isPortrait {
-                        EditorRaisedThumb(shape: RoundedRectangle(cornerRadius: EditorInterfaceRadius.compact, style: .continuous))
+                        EditorRaisedThumb(shape: RoundedRectangle(cornerRadius: EditorInterfaceRadius.compact, style: .continuous), usesAccent: false)
                     }
                 }
         }.buttonStyle(EditorToolbarPressButtonStyle(cornerRadius: EditorInterfaceRadius.compact))

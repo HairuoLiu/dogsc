@@ -205,7 +205,7 @@ struct EditorBackgroundInspector: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay {
                             RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(isSelected ? (palette?.stroke ?? EditorTheme.selectionTint) : EditorTheme.chrome(0.08), lineWidth: isSelected ? 2 : 0.75)
+                                .strokeBorder(isSelected ? EditorTheme.selectionTint : EditorTheme.chrome(0.08), lineWidth: isSelected ? 2 : 0.75)
                         }
                         .overlay(alignment: .topTrailing) {
                             if isSelected {
@@ -373,7 +373,7 @@ struct EditorBackgroundInspector: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 9)
                                     .stroke(
-                                        isSelected ? (palette?.stroke ?? editorAccent) : EditorTheme.chrome(0.12),
+                                        isSelected ? EditorTheme.selectionTint : EditorTheme.chrome(0.12),
                                         lineWidth: isSelected ? 2 : 1
                                     )
                             )
@@ -420,7 +420,7 @@ struct EditorBackgroundInspector: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 9)
                                     .stroke(
-                                        isSelected ? (palette?.stroke ?? editorAccent) : EditorTheme.chrome(0.12),
+                                        isSelected ? EditorTheme.selectionTint : EditorTheme.chrome(0.12),
                                         lineWidth: isSelected ? 2 : 1
                                     )
                             )

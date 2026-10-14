@@ -153,10 +153,10 @@ extension EditorTimelineView {
         // last gesture must not stay drawn over the playhead.
         if let time = timelineSnap.targetTime,
            gestureOwnership.activeIntent != nil || draggedPrimarySegmentID != nil {
-            Rectangle().fill(EditorConsole.frame.stroke.opacity(0.8))
+            Rectangle().fill(EditorConsole.Track.primary.stroke.opacity(0.8))
                 .frame(width: 1, height: timelineCanvasHeight)
                 .overlay(alignment: .top) {
-                    EditorSnapPulse(color: EditorConsole.frame.stroke).id(time)
+                    EditorSnapPulse(color: EditorConsole.Track.primary.stroke).id(time)
                 }
                 .offset(x: CGFloat(time / max(duration, 0.001)) * width - 0.5)
                 .allowsHitTesting(false).accessibilityHidden(true).zIndex(40)

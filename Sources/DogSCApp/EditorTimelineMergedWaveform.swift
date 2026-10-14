@@ -60,8 +60,9 @@ private struct WaveformEnvelopeCanvas: View, @MainActor Animatable, @MainActor E
         set { expansion = newValue }
     }
     var body: some View {
-        // Sound in the 声音 task's colour, so the band reads as audio.
-        let ink = EditorConsole.audio.text
+        // Sound lives inside the primary recording clip: a soft sage-lime of
+        // the primary hue, quiet enough not to outweigh the effect lanes.
+        let ink = EditorConsole.waveformInk
         let cache = envelopeCache
         Canvas(rendersAsynchronously: true) { context, size in
             guard let samples = cache.samples(for: request) else { return }

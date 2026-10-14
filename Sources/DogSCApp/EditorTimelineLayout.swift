@@ -68,7 +68,8 @@ extension EditorTimelineView {
         tint: Color,
         isFocused: Bool
     ) -> some View {
-        tint.opacity(isFocused ? 0.06 : 0)
+        // A neutral lift: lane colour is an accent, never a full-row wash.
+        EditorTheme.chrome(isFocused ? 0.025 : 0)
             .allowsHitTesting(false)
             .animation(SpringMotion.interactive, value: isFocused)
     }
@@ -89,7 +90,7 @@ extension EditorTimelineView {
     private func timelineModeSurface(isOn: Bool) -> some View {
         if isOn {
             Capsule(style: .continuous)
-                .fill(EditorConsole.frame.soft)
+                .fill(EditorConsole.Track.primary.soft)
                 .transition(.opacity)
         }
     }
@@ -201,7 +202,7 @@ extension EditorTimelineView {
                             }
                         }
                             .font(.appUI(size: 11, weight: .medium))
-                            .foregroundStyle(isSnappingEnabled ? EditorConsole.frame.softInk : Color.secondary)
+                            .foregroundStyle(isSnappingEnabled ? EditorConsole.Track.primary.softInk : Color.secondary)
                             .padding(.horizontal, 8).frame(height: 30)
                             .background { timelineModeSurface(isOn: isSnappingEnabled) }
                             .animation(SpringMotion.lift, value: isSnappingEnabled)
@@ -232,7 +233,7 @@ extension EditorTimelineView {
                         .font(.appUI(size: 11, weight: .medium))
                         .foregroundStyle(
                             isHoverPreviewEnabled
-                                ? EditorConsole.frame.softInk
+                                ? EditorConsole.Track.primary.softInk
                                 : Color.secondary
                         )
                         .padding(.horizontal, 8)
@@ -373,7 +374,7 @@ extension EditorTimelineView {
                 .frame(height: timelineRulerHeight)
                 .timelineRowDivider(strong: true)
             VStack(spacing: 0) {
-                timelineLabel("屏幕录制", symbol: usesWaveformClips ? "waveform" : "display", tint: EditorConsole.frame.stroke,
+                timelineLabel("屏幕录制", symbol: usesWaveformClips ? "waveform" : "display", tint: EditorConsole.Track.primary.stroke,
                     height: primaryVideoHeight + 12, isFocused: focusedTimelineLane == .primary)
             }
             .timelineRowDivider()
@@ -381,7 +382,7 @@ extension EditorTimelineView {
                 timelineLabel(
                     "摄像同步",
                     symbol: "waveform.path.ecg",
-                    tint: EditorConsole.camera.stroke,
+                    tint: EditorConsole.Track.cameraSync.stroke,
                     height: cameraSyncTimelineHeight,
                     isFocused: focusedTimelineLane == .cameraSync
                 )
@@ -391,7 +392,7 @@ extension EditorTimelineView {
             if showsZoomTimeline {
                 optionalTimelineLabel(
                     "缩放",
-                    tint: EditorConsole.zoom.stroke,
+                    tint: EditorConsole.Track.zoom.stroke,
                     height: zoomTimelineHeight,
                     track: .zoom
                 )
@@ -399,7 +400,7 @@ extension EditorTimelineView {
             if showsScreenMotionTimeline {
                 optionalTimelineLabel(
                     "屏幕 3D",
-                    tint: EditorConsole.zoom.stroke,
+                    tint: EditorConsole.Track.screenMotion.stroke,
                     height: motionTimelineHeight,
                     track: .screenMotion
                 )
@@ -407,7 +408,7 @@ extension EditorTimelineView {
             if showsCameraMotionTimeline {
                 optionalTimelineLabel(
                     "摄像运动",
-                    tint: EditorConsole.camera.stroke,
+                    tint: EditorConsole.Track.cameraMotion.stroke,
                     height: motionTimelineHeight,
                     track: .cameraMotion
                 )
@@ -415,7 +416,7 @@ extension EditorTimelineView {
             if showsOverlayTimeline {
                 optionalTimelineLabel(
                     "叠加",
-                    tint: EditorConsole.opening.stroke,
+                    tint: EditorConsole.Track.overlay.stroke,
                     height: overlayTimelineHeight,
                     track: .overlays
                 )
@@ -510,7 +511,7 @@ extension EditorTimelineView {
             // only its non-interactive guide enters the primary clip.
             if let cutX {
                 Rectangle()
-                    .fill(EditorConsole.frame.stroke)
+                    .fill(EditorConsole.Track.primary.stroke)
                     .frame(width: 1, height: primaryTimelineHeight)
                     .offset(x: cutX - 0.5, y: timelineRulerHeight)
                     .allowsHitTesting(false)
@@ -622,9 +623,9 @@ extension EditorTimelineView {
             if let cutX {
                 AppLineIcon(kind: .scissors, size: 16)
                     .font(.appUI(size: 10, weight: .bold))
-                    .foregroundStyle(EditorConsole.frame.ink)
+                    .foregroundStyle(EditorConsole.Track.primary.ink)
                     .frame(width: 18, height: 18)
-                    .background(Circle().fill(EditorConsole.frame.fill))
+                    .background(Circle().fill(EditorConsole.Track.primary.fill))
                     .offset(x: cutX - 9, y: timelineRulerHeight - 20)
                     .allowsHitTesting(false)
                     .zIndex(31)
@@ -734,7 +735,7 @@ extension EditorTimelineView {
     ) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(EditorConsole.frame.timelineSurface(emphasis))
+                .fill(EditorConsole.Track.primary.primaryTimelineSurface(emphasis))
             GeometryReader { geometry in
                 let bandHeight = showsClipWaveforms
                     ? geometry.size.height * EditorTimelineClipGeometry.waveformBandFraction : 0
@@ -753,7 +754,7 @@ extension EditorTimelineView {
                             .fill(Color.clear)
                             .frame(height: bandHeight)
                             .overlay(alignment: .top) {
-                                Rectangle().fill(EditorConsole.frame.stroke.opacity(0.20)).frame(height: 0.5)
+                                Rectangle().fill(EditorTheme.chrome(0.10)).frame(height: 0.5)
                             }
                     }
                 }
@@ -781,7 +782,7 @@ extension EditorTimelineView {
                     Text("没有声音")
                         .font(.appUI(size: 11, weight: .medium))
                 }
-                .foregroundStyle(EditorConsole.frame.softInk)
+                .foregroundStyle(EditorTheme.secondaryText)
                 .lineLimit(1)
                 .transition(.opacity)
                 .allowsHitTesting(false)
@@ -791,7 +792,7 @@ extension EditorTimelineView {
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .padding(EditorTimelineClipGeometry.contentInset)
             .background(EditorTheme.panelRaised, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .editorTimelineClipChrome(cornerRadius: 9, emphasis: emphasis, tint: EditorConsole.frame.text)
+            .editorTimelineClipChrome(cornerRadius: 9, emphasis: emphasis, selectionRing: EditorConsole.Track.primary.stroke)
     }
 
     /// A small, quiet length tag in the clip's corner: "4.7s" instead of a
@@ -800,7 +801,7 @@ extension EditorTimelineView {
         Text(timelineClipLength(duration))
             .font(.appUI(size: 10, weight: .semibold)).monospacedDigit()
             .lineLimit(1)
-            .foregroundStyle(usesWaveformClips ? EditorConsole.frame.softInk : .white)
+            .foregroundStyle(usesWaveformClips ? EditorTheme.secondaryText : .white)
             .padding(.horizontal, 5).padding(.vertical, 1.5)
             .background(usesWaveformClips ? EditorTheme.panelRaised : .black.opacity(0.64), in: Capsule())
             .animation(EditorSwapTiming.crossfade, value: usesWaveformClips)
@@ -1005,7 +1006,7 @@ extension EditorTimelineView {
         let visibleSegments = visibleSegmentIndices.map { (index: $0, clip: segments[$0]) }
         return ZStack(alignment: .topLeading) {
             timelineLaneSurface(
-                tint: EditorConsole.frame.fill,
+                tint: EditorConsole.Track.primary.fill,
                 isFocused: focusedTimelineLane == .primary
             )
             Color.clear
@@ -1114,7 +1115,7 @@ extension EditorTimelineView {
                 path.addLine(to: CGPoint(x: width, y: baselineY))
             }
             .stroke(
-                EditorConsole.camera.stroke.opacity(0.30),
+                EditorConsole.Track.cameraSync.stroke.opacity(0.30),
                 style: StrokeStyle(lineWidth: 1, dash: [4, 4])
             )
             .allowsHitTesting(false)
@@ -1124,12 +1125,12 @@ extension EditorTimelineView {
                 duration: duration,
                 displayRange: displayRange
             )
-            .stroke(EditorConsole.camera.stroke, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+            .stroke(EditorConsole.Track.cameraSync.stroke, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
             .allowsHitTesting(false)
 
             Text(String(format: appLocalized("基准 %@"), cameraSyncOffsetLabel(cameraSyncBaselineOffset)))
                 .font(.appUI(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(EditorConsole.camera.text)
+                .foregroundStyle(EditorConsole.Track.cameraSync.text)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
                 .background(EditorTheme.panelRaised.opacity(0.92), in: Capsule())
@@ -1216,7 +1217,7 @@ extension EditorTimelineView {
             if !isSelected {
                 Text(cameraSyncOffsetLabel(cameraSyncBaselineOffset + anchor.offset))
                     .font(.appUI(size: 8, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(EditorConsole.camera.text)
+                    .foregroundStyle(EditorConsole.Track.cameraSync.text)
                     .frame(width: 70)
                     .offset(x: min(max(x - 35, 0), max(width - 70, 0)), y: 3)
                     .allowsHitTesting(false)
@@ -1227,7 +1228,7 @@ extension EditorTimelineView {
                     .fill(isSelected ? Color.white : editorCameraSyncClip)
                     .overlay {
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .stroke(EditorConsole.camera.stroke, lineWidth: isSelected ? 2 : 1)
+                            .stroke(EditorConsole.Track.cameraSync.stroke, lineWidth: isSelected ? 2 : 1)
                     }
                     .frame(width: 11, height: 11)
                     .rotationEffect(.degrees(45))
@@ -1263,7 +1264,7 @@ extension EditorTimelineView {
         HStack(spacing: 3) {
             Text(cameraSyncOffsetLabel(cameraSyncBaselineOffset + anchor.offset))
                 .font(.appUI(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(EditorConsole.camera.text)
+                .foregroundStyle(EditorConsole.Track.cameraSync.text)
             Button { nudgeCameraSyncAnchor(id: anchor.id, by: -cameraSyncAdjustmentStep) } label: {
                 Text("延\(cameraSyncAdjustmentStepMilliseconds)")
                     .font(.appUI(size: 10, weight: .semibold))

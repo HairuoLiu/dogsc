@@ -60,25 +60,25 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
                     + originTitle
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(EditorConsole.zoom.timelineSurface(emphasis))
+                        .fill(EditorConsole.Track.zoom.timelineSurface(emphasis))
                         .overlay {
                             if segmentWidth > 86 {
                                 Text(label)
                                     .font(.appUI(size: 11, weight: .medium))
-                                    .foregroundStyle(EditorTheme.timelineZoomInk)
+                                    .foregroundStyle(EditorConsole.Track.zoom.softInk)
                                     .lineLimit(1)
                             } else if segmentWidth > 44 {
                                 Text(EditorSliderValueFormat.compact(segment.scale, unit: "×", digits: 1))
                                     .font(.appUI(size: 11, weight: .semibold))
-                                    .foregroundStyle(EditorTheme.timelineZoomInk)
+                                    .foregroundStyle(EditorConsole.Track.zoom.softInk)
                                     .lineLimit(1)
                             } else {
                                 EditorSymbol("magnifyingglass", size: 10.5)
                                     .font(.system(size: 8, weight: .semibold))
-                                    .foregroundStyle(EditorTheme.timelineZoomInk)
+                                    .foregroundStyle(EditorConsole.Track.zoom.softInk)
                             }
                         }
-                        .editorTimelineClipChrome(cornerRadius: 8, emphasis: emphasis, tint: EditorConsole.zoom.text)
+                        .editorTimelineClipChrome(cornerRadius: 8, emphasis: emphasis, tint: EditorConsole.Track.zoom.stroke)
 
                     if emphasis.showsHandles {
                         HStack(spacing: 0) {
@@ -127,9 +127,9 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
             if let indicatorX = zoomCreateIndicatorX(width: width, duration: duration) {
                 EditorSymbol("plus", size: 11.5)
                     .font(.appUI(size: 10, weight: .bold))
-                    .foregroundStyle(EditorConsole.zoom.ink)
+                    .foregroundStyle(EditorConsole.Track.zoom.ink)
                     .frame(width: 18, height: 18)
-                    .background(Circle().fill(EditorConsole.zoom.fill))
+                    .background(Circle().fill(EditorConsole.Track.zoom.fill))
                     .offset(x: indicatorX - 9)
                     .allowsHitTesting(false)
             }
@@ -141,10 +141,10 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
                 let startX = CGFloat(start / max(duration, 0.001)) * width
                 let rangeWidth = max(CGFloat((end - start) / max(duration, 0.001)) * width, 4)
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(EditorConsole.zoom.timelineSurface(.hovered))
+                    .fill(EditorConsole.Track.zoom.timelineSurface(.hovered))
                     .overlay(
                         RoundedRectangle(cornerRadius: 7)
-                            .stroke(EditorConsole.zoom.text, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                            .stroke(EditorConsole.Track.zoom.stroke, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     )
                     .frame(width: rangeWidth, height: zoomBarHeight)
                     .offset(x: startX)
@@ -217,7 +217,7 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
 
     func zoomResizeHandle(edge: ZoomResizeEdge) -> some View {
         Capsule()
-            .fill(EditorConsole.zoom.text)
+            .fill(EditorConsole.Track.zoom.stroke)
             .frame(width: 3, height: 14)
             .accessibilityLabel(appLocalized(edge == .leading ? "调整动画开始" : "调整动画结束"))
     }

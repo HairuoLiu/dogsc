@@ -106,15 +106,15 @@ struct EditorPrimaryPillButtonStyle: ButtonStyle {
             let pressed = configuration.isPressed && isEnabled
             configuration.label
                 .font(.appUI(size: 13, weight: .semibold))
-                .foregroundStyle(EditorConsole.frame.ink)
+                .foregroundStyle(EditorTheme.onAccent)
                 .padding(.horizontal, 14)
                 .frame(height: 30)
-                // The one primary action is the editor's own blue, not a
-                // black slab; hover lifts it slightly, press settles it.
-                .background(EditorConsole.frame.fill.opacity(pressed ? 0.82 : 1),
+                // The one primary action is the editor's black ink slab;
+                // hover lifts it slightly, press settles it.
+                .background(EditorTheme.platinumAccent.opacity(pressed ? 0.82 : 1),
                             in: Capsule(style: .continuous))
-                .overlay(Capsule(style: .continuous).fill(.white.opacity(hovered && isEnabled && !pressed ? 0.12 : 0)))
-                .shadow(color: EditorConsole.frame.fill.opacity(hovered && isEnabled ? 0.35 : 0), radius: 6, y: 2)
+                .overlay(Capsule(style: .continuous).fill(EditorTheme.onAccent.opacity(hovered && isEnabled && !pressed ? 0.12 : 0)))
+                .shadow(color: hovered && isEnabled ? EditorTheme.accentGlow : .clear, radius: 6, y: 2)
                 .contentShape(Capsule(style: .continuous))
                 .appKeyboardFocus(in: Capsule(style: .continuous))
                 .scaleEffect(pressed && !RecorderMotion.reduces ? 0.97 : 1)
@@ -663,13 +663,10 @@ struct EditorView: View {
         .animation(nil, value: isCropping)
     }
 
-    /// The colour identity of what the inspector is currently about: the
-    /// selected overlay's family, otherwise the current task.
+    /// The colour identity of the current inspector tab (first 3 tabs use
+    /// primary lime green, last 3 tabs use secondary coral orange).
     private var inspectorPalette: EditorConsolePalette {
-        switch editorStore.selection {
-        case .mosaic, .sticker: EditorConsole.opening
-        default: EditorConsole.palette(for: selectedInspector)
-        }
+        EditorConsole.palette(for: selectedInspector)
     }
 
     private func presentUndoToast(redo: Bool, actionName: String) {
@@ -858,10 +855,10 @@ struct EditorView: View {
                         .scaleEffect(playbackController.isPlaying ? 1 : 0.6)
                 }
                 .animation(SpringMotion.snappy, value: playbackController.isPlaying)
-                .foregroundStyle(EditorConsole.frame.ink)
+                .foregroundStyle(EditorTheme.onAccent)
                 .frame(width: 36, height: 36)
-                .background(EditorConsole.frame.fill, in: Circle())
-                .shadow(color: EditorConsole.frame.fill.opacity(playbackController.isPlaying ? 0.45 : 0), radius: 6)
+                .background(EditorTheme.platinumAccent, in: Circle())
+                .shadow(color: playbackController.isPlaying ? EditorTheme.accentGlow : .clear, radius: 6)
                 .animation(.easeOut(duration: 0.2), value: playbackController.isPlaying)
             }
             .buttonStyle(EditorToolbarPressButtonStyle(showsHover: false))
@@ -1082,10 +1079,10 @@ struct EditorView: View {
                         Text("裁切模式")
                             .font(.appUI(size: 11, weight: .semibold))
                     }
-                    .foregroundStyle(EditorConsole.frame.softInk)
+                    .foregroundStyle(EditorTheme.primaryText)
                     .padding(.horizontal, 10)
                     .frame(height: 30)
-                    .background(EditorConsole.frame.soft, in: Capsule(style: .continuous))
+                    .background(EditorTheme.selectionWash, in: Capsule(style: .continuous))
                     .padding(.trailing, 4)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
 
@@ -1095,7 +1092,6 @@ struct EditorView: View {
                         .buttonStyle(.editorGhost)
                     Button("完成") { confirmCrop() }
                         .buttonStyle(.editorPrimary(minHeight: 30))
-                        .environment(\.consolePalette, EditorConsole.frame)
                 } else {
                     EditorCanvasRatioSelector(canvas: Binding(
                         get: { editorStore.project.canvas },

@@ -68,7 +68,7 @@ struct EditorMockupTurntable: View {
                 HStack(spacing: 6) {
                     ForEach(styles.indices, id: \.self) { index in
                         Capsule(style: .continuous)
-                            .fill(index == selectedIndex ? (palette?.fill ?? EditorTheme.platinumAccent) : EditorTheme.chrome(0.16))
+                            .fill(index == selectedIndex ? EditorTheme.platinumAccent : EditorTheme.chrome(0.16))
                             .frame(width: index == selectedIndex ? 18 : 5, height: 5)
                     }
                 }

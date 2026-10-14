@@ -473,6 +473,7 @@ private struct EditorToggleButtonStyle: ButtonStyle {
 
     private struct Surface: View {
         @Environment(\.isEnabled) private var isEnabled
+        @Environment(\.consolePalette) private var palette
         @State private var isHovered = false
         let configuration: Configuration
         let isOn: Bool
@@ -496,16 +497,18 @@ private struct EditorToggleButtonStyle: ButtonStyle {
         }
 
         private var toggleIndicator: some View {
-            ZStack(alignment: isOn ? .trailing : .leading) {
+            let activeFill = EditorTheme.platinumAccent
+            let knobFill = isOn ? EditorTheme.onAccent : Color.white
+            return ZStack(alignment: isOn ? .trailing : .leading) {
                 Capsule(style: .continuous)
-                    .fill(isOn ? EditorTheme.success : EditorTheme.chrome(showsHover ? 0.16 : 0.11))
+                    .fill(isOn ? activeFill : EditorTheme.chrome(showsHover ? 0.16 : 0.11))
                     .overlay {
                         Capsule(style: .continuous)
                             .strokeBorder(isOn ? Color.black.opacity(0.08) : EditorTheme.chrome(0.06), lineWidth: 0.5)
                     }
                 // The knob stretches toward its destination while held.
                 Capsule(style: .continuous)
-                    .fill(.white)
+                    .fill(knobFill)
                     .overlay {
                         Capsule(style: .continuous)
                             .strokeBorder(Color.black.opacity(0.06), lineWidth: 0.5)
@@ -811,18 +814,16 @@ struct EditorPrimaryButtonStyle: ButtonStyle {
         Body(configuration: configuration, minHeight: minHeight)
     }
 
-    /// The page's one solid action, in the task's own colour (flat, no
-    /// gradient or glow); outside a task page it stays platinum.
+    /// 主按钮统一使用石墨黑（EditorTheme.platinumAccent），不变成整条亮色块。
     struct Body: View {
         @Environment(\.isEnabled) private var isEnabled
-        @Environment(\.consolePalette) private var palette
         @State private var isHovered = false
         let configuration: Configuration
         let minHeight: CGFloat
 
         var body: some View {
-            let fill = palette?.fill ?? EditorTheme.platinumAccent
-            let ink = palette?.ink ?? EditorTheme.onAccent
+            let fill = EditorTheme.platinumAccent
+            let ink = EditorTheme.onAccent
             configuration.label
                 .font(.appUI(size: 12, weight: .semibold))
                 .foregroundStyle(ink)
@@ -831,7 +832,7 @@ struct EditorPrimaryButtonStyle: ButtonStyle {
                 .background(Capsule(style: .continuous).fill(fill))
                 .overlay(
                     Capsule(style: .continuous)
-                        .fill((palette == nil ? EditorTheme.onAccent : Color.white).opacity(
+                        .fill(EditorTheme.onAccent.opacity(
                             !isEnabled ? 0 : configuration.isPressed ? 0.18 : isHovered ? 0.12 : 0
                         ))
                         .allowsHitTesting(false)

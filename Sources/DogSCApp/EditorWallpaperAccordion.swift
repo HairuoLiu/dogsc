@@ -67,7 +67,7 @@ struct EditorWallpaperAccordion: View {
                     }
                     .overlay {
                         shape.strokeBorder(
-                            isSelected ? (palette?.fill ?? EditorTheme.platinumAccent) : EditorTheme.chrome(0.08),
+                            isSelected ? EditorTheme.platinumAccent : EditorTheme.chrome(0.08),
                             lineWidth: isSelected ? 2 : 0.75
                         )
                     }

@@ -155,7 +155,7 @@ struct ZoomFocusMap: View {
                         .shadow(color: .black.opacity(0.22), radius: 4, y: 2)
                         .frame(width: 22, height: 22)
                     Circle()
-                        .fill(palette?.fill ?? Color(white: 0.12))
+                        .fill(Color(white: 0.12))
                         .frame(width: 8, height: 8)
                 }
                 .scaleEffect(isActive && !RecorderMotion.reduces ? 1.1 : 1)

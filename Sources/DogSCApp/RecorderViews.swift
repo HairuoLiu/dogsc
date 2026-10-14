@@ -10,8 +10,8 @@ let dividerColor = EditorTheme.hairline
 let editorAccent = EditorTheme.platinumAccent
 /// 缩放／屏幕运镜片段的身份色。
 let editorZoomClip = EditorTheme.timelineZoomAccent
-let editorCameraSyncClip = EditorConsole.camera.fill
-let editorOverlayClip = EditorConsole.opening.fill
+let editorCameraSyncClip = EditorConsole.Track.cameraSync.fill
+let editorOverlayClip = EditorConsole.Track.overlay.fill
 
 func setupWindowWidth() -> CGFloat { 714 }
 func recordingWindowWidth(recordsMicrophone: Bool) -> CGFloat {

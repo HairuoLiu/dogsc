@@ -189,12 +189,12 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
         } label: {
             ZStack {
                 Circle()
-                    .fill(EditorConsole.frame.fill)
+                    .fill(EditorConsole.Track.primary.fill)
                 EditorSymbol(junction.hasRemovedSourceGap
                     ? "arrow.uturn.backward"
                     : "link", size: 10.5)
                     .font(.appUI(size: 8, weight: .bold))
-                    .foregroundStyle(EditorConsole.frame.ink)
+                    .foregroundStyle(EditorConsole.Track.primary.ink)
             }
             .frame(width: 17, height: 17)
             .frame(width: 28, height: 28)
@@ -225,10 +225,10 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
             restorePrimaryLeadingGap(gap)
         } label: {
             ZStack {
-                Circle().fill(EditorConsole.frame.fill)
+                Circle().fill(EditorConsole.Track.primary.fill)
                 EditorSymbol("arrow.uturn.backward", size: 10.5)
                     .font(.appUI(size: 8, weight: .bold))
-                    .foregroundStyle(EditorConsole.frame.ink)
+                    .foregroundStyle(EditorConsole.Track.primary.ink)
             }
             .frame(width: 17, height: 17)
             .frame(width: 28, height: 28)
@@ -246,10 +246,10 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
             restorePrimaryTrailingGap(gap)
         } label: {
             ZStack {
-                Circle().fill(EditorConsole.frame.fill)
+                Circle().fill(EditorConsole.Track.primary.fill)
                 EditorSymbol("arrow.uturn.backward", size: 10.5)
                     .font(.appUI(size: 8, weight: .bold))
-                    .foregroundStyle(EditorConsole.frame.ink)
+                    .foregroundStyle(EditorConsole.Track.primary.ink)
             }
             .frame(width: 17, height: 17)
             .frame(width: 28, height: 28)
@@ -588,7 +588,7 @@ var primarySegmentJunctions: [EditorTimelineSegmentJunction] {
     ) -> some View {
         let intent = EditorTimelineGestureIntent.primaryTrim(segment.id, edge)
         return EditorTrimGrip(
-                color: EditorConsole.frame.text,
+                color: EditorConsole.Track.primary.stroke,
                 height: min(max(primaryVideoHeight * 0.3, 12), 20)
             )
             // The compact grip owns its backing. Keep the existing full-height

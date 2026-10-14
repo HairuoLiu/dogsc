@@ -249,7 +249,7 @@ extension EditorTimelineView {
             .padding(.vertical, 10)
             if let range = overlayCreateRange, range.upperBound - range.lowerBound > 0.01 {
                 RoundedRectangle(cornerRadius: 7)
-                    .fill(editorOverlayClip.opacity(0.18))
+                    .fill(EditorTheme.chrome(0.08))
                     .overlay(RoundedRectangle(cornerRadius: 7)
                         .strokeBorder(editorOverlayClip.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
                     .frame(width: max(CGFloat((range.upperBound - range.lowerBound) / duration) * width, 3), height: 30)
@@ -294,12 +294,12 @@ extension EditorTimelineView {
                     isHovered: isHovered
                 )
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(EditorConsole.opening.timelineSurface(emphasis))
+                    .fill(EditorConsole.Track.overlay.timelineSurface(emphasis))
                     .overlay(alignment: .leading) {
                         if clipWidth >= 52 {
                             Text(clip.title)
                                 .font(.appUI(size: 10, weight: .semibold))
-                                .foregroundStyle(EditorConsole.opening.softInk)
+                                .foregroundStyle(EditorConsole.Track.overlay.softInk)
                                 .lineLimit(1)
                                 .padding(.horizontal, 9)
                         }
@@ -308,11 +308,11 @@ extension EditorTimelineView {
                         if emphasis.showsHandles, clipWidth >= 22 {
                             HStack(spacing: 0) {
                                 Capsule()
-                                    .fill(EditorConsole.opening.text)
+                                    .fill(EditorConsole.Track.overlay.stroke)
                                     .frame(width: 3, height: 13)
                                 Spacer(minLength: 0)
                                 Capsule()
-                                    .fill(EditorConsole.opening.text)
+                                    .fill(EditorConsole.Track.overlay.stroke)
                                     .frame(width: 3, height: 13)
                             }
                             .padding(.horizontal, 2)
@@ -320,7 +320,7 @@ extension EditorTimelineView {
                             .allowsHitTesting(false)
                         }
                     }
-                    .editorTimelineClipChrome(cornerRadius: 7, emphasis: emphasis, tint: EditorConsole.opening.text)
+                    .editorTimelineClipChrome(cornerRadius: 7, emphasis: emphasis, tint: EditorConsole.Track.overlay.stroke)
                     .contentShape(Rectangle())
                 .frame(width: clipWidth, height: 30)
                 .editorClipDragFeedback(overlayTimelineDrag?.id == clip.id && overlayTimelineDrag?.kind == clip.kind

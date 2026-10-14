@@ -540,7 +540,7 @@ struct EditorMockupCard: View {
         .aspectRatio(1.45, contentMode: .fit)
         .clipShape(card)
         .overlay {
-            card.strokeBorder(isSelected ? (palette?.stroke ?? EditorTheme.platinumAccent) : EditorTheme.chrome(0.06),
+            card.strokeBorder(isSelected ? EditorTheme.platinumAccent : EditorTheme.chrome(0.06),
                               lineWidth: isSelected ? 2 : 0.5)
         }
         .animation(SpringMotion.settle, value: isSelected)
@@ -615,7 +615,7 @@ struct EditorMockupCard: View {
             if let screenImage {
                 Color.clear.overlay { Image(nsImage: screenImage).resizable().scaledToFill() }
             } else {
-                LinearGradient(colors: [Color(red: 0.55, green: 0.62, blue: 0.78), Color(red: 0.78, green: 0.66, blue: 0.74)],
+                LinearGradient(colors: [Color(red: 0.95, green: 0.78, blue: 0.62), Color(red: 0.88, green: 0.84, blue: 0.72)],
                                startPoint: .topLeading, endPoint: .bottomTrailing)
             }
         }

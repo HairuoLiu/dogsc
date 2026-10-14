@@ -68,7 +68,7 @@ extension CanvasPreview {
                                     x: point.x - radius, y: point.y - radius,
                                     width: radius * 2, height: radius * 2
                                 ))
-                                context.fill(dot, with: .color(EditorConsole.opening.fill))
+                                context.fill(dot, with: .color(EditorConsole.Track.overlay.fill))
                                 context.stroke(dot,
                                                with: .color(Color.white),
                                                lineWidth: isResizing ? 2.5 : 2)
@@ -182,7 +182,7 @@ extension CanvasPreview {
                             size: CGSize(width: width, height: height),
                             rotation: sticker.rotationRadians
                         )
-                        EditorCanvasHandle(color: EditorConsole.opening.fill, active: isResizing)
+                        EditorCanvasHandle(color: EditorConsole.Track.overlay.fill, active: isResizing)
                             .position(point)
                             .highPriorityGesture(stickerResizeGesture(
                                 id: sticker.id,
@@ -204,17 +204,17 @@ extension CanvasPreview {
                         path.addLine(to: rotationGeometry.handle)
                     }
                     .stroke(
-                        EditorConsole.opening.fill.opacity(isRotating ? 1 : 0.8),
+                        EditorConsole.Track.overlay.fill.opacity(isRotating ? 1 : 0.8),
                         style: StrokeStyle(lineWidth: isRotating ? 1.75 : 1.25)
                     )
                     .frame(width: canvasSize.width, height: canvasSize.height)
                     .allowsHitTesting(false)
                     .zIndex(interactionZIndex + 1)
 
-                    EditorCanvasHandle(color: EditorConsole.opening.fill, active: isRotating, size: 20)
+                    EditorCanvasHandle(color: EditorConsole.Track.overlay.fill, active: isRotating, size: 20)
                         .overlay {
                             AppLineIcon(kind: .refresh, size: 11)
-                                .foregroundStyle(EditorConsole.opening.ink)
+                                .foregroundStyle(EditorConsole.Track.overlay.ink)
                                 .allowsHitTesting(false)
                         }
                         .frame(width: 34, height: 34)

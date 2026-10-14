@@ -1150,16 +1150,18 @@ struct EditorTimelineView: View {
             .frame(height: timelineViewportHeight)
             HStack(spacing: 0) {
                 Color.clear.frame(width: presentedLabelWidth)
+                // A neutral navigator, only while zoomed in. At full view the
+                // whole timeline is already visible, so the bar (and its old
+                // coloured effect markers) was just noise along the bottom.
                 NativeTimelineOverviewView(
                     scrollView: timelineScrollView,
                     playbackController: playbackController,
-                    duration: duration,
-                    markers: overviewMarkers(duration: duration)
+                    duration: duration
                 )
-                // Only useful once the timeline is zoomed in; at full view it
-                // stays as a faint map of where the effects are.
-                .opacity(timelineZoom > 1.01 ? 1 : 0.5)
+                .opacity(timelineZoom > 1.01 ? 1 : 0)
+                .allowsHitTesting(timelineZoom > 1.01)
                 .animation(.easeOut(duration: 0.2), value: timelineZoom > 1.01)
+                .accessibilityHidden(timelineZoom <= 1.01)
                 .accessibilityLabel("时间线总览")
                 .accessibilityValue(
                     "当前缩放 \(String(format: "%.1f", timelineZoom)) 倍；拖动可定位"
@@ -1323,29 +1325,5 @@ struct EditorTimelineView: View {
             removeTimelineBoundsObservation()
             playbackController.endHoverPreview()
         }
-    }
-}
-
-extension EditorTimelineView {
-    /// Effects drawn into the overview map, so the whole recording's zooms,
-    /// motion and overlays can be found without scrolling.
-    func overviewMarkers(duration: TimeInterval) -> [EditorOverviewMarker] {
-        let length = max(duration, 0.001)
-        let zoom = NSColor(EditorConsole.zoom.fill)
-        let camera = NSColor(EditorConsole.camera.fill)
-        let overlay = NSColor(EditorConsole.opening.fill)
-        var markers = timelineZoomSegments.map {
-            EditorOverviewMarker(start: $0.startTime / length, end: $0.endTime / length, color: zoom)
-        }
-        markers += screenMotionTimelineClips.map {
-            EditorOverviewMarker(start: $0.timing.startTime / length, end: $0.timing.endTime / length, color: zoom)
-        }
-        markers += cameraMotionTimelineClips.map {
-            EditorOverviewMarker(start: $0.timing.startTime / length, end: $0.timing.endTime / length, color: camera)
-        }
-        markers += overlayTimelineClips.map {
-            EditorOverviewMarker(start: $0.timing.startTime / length, end: $0.timing.endTime / length, color: overlay)
-        }
-        return markers
     }
 }

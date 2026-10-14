@@ -200,21 +200,21 @@ extension EditorTimelineView {
 
             VStack(spacing: 2) {
                 timelineTrackVisibilityRow(
-                    "缩放", symbol: "magnifyingglass", palette: EditorConsole.zoom, track: .zoom,
+                    "缩放", symbol: "magnifyingglass", palette: EditorConsole.Track.zoom, track: .zoom,
                     clipCount: editorStore.previewProject.zoomAnimations.count
                 )
                 timelineTrackVisibilityRow(
-                    "屏幕 3D", symbol: "cube.transparent", palette: EditorConsole.zoom, track: .screenMotion,
+                    "屏幕 3D", symbol: "cube.transparent", palette: EditorConsole.Track.screenMotion, track: .screenMotion,
                     clipCount: editorStore.previewProject.timeline.screenMotionClips.count
                 )
                 timelineTrackVisibilityRow(
-                    "摄像运动", symbol: "video", palette: EditorConsole.camera, track: .cameraMotion,
+                    "摄像运动", symbol: "video", palette: EditorConsole.Track.cameraMotion, track: .cameraMotion,
                     clipCount: editorStore.previewProject.timeline.cameraMotionClips.count,
                     isEnabled: mediaSession.inventories.camera.hasVideo,
                     disabledDetail: "无摄像头素材"
                 )
                 timelineTrackVisibilityRow(
-                    "叠加", symbol: "square.on.square", palette: EditorConsole.opening, track: .overlays,
+                    "叠加", symbol: "square.on.square", palette: EditorConsole.Track.overlay, track: .overlays,
                     clipCount: editorStore.previewProject.timeline.mosaicClips.count
                         + editorStore.previewProject.timeline.stickerClips.count
                 )

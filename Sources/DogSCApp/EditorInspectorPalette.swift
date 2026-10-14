@@ -23,6 +23,8 @@ struct EditorConsolePalette: Equatable {
     /// The hue as small text on the panel: deep enough for 4.5:1 in the
     /// light appearance, the hue itself in dark.
     let text: Color
+
+    fileprivate let fillNSColor: NSColor
 }
 
 private func paletteRGB(_ hex: UInt32) -> NSColor {
@@ -37,31 +39,70 @@ private func paletteRGB(_ hex: UInt32) -> NSColor {
 enum EditorConsole {
     static let scrollSpace = "inspector.scroll"
 
-    private static func vivid(fill: UInt32, lightStroke: UInt32, ink: UInt32, lightText: UInt32) -> EditorConsolePalette {
+    fileprivate static func vivid(fill: UInt32, lightStroke: UInt32, ink: UInt32, lightText: UInt32) -> EditorConsolePalette {
         let fillColor = paletteRGB(fill)
         // In dark, text on the hue's wash is the hue lifted toward white so
         // a selected (stronger) wash still keeps 5.7:1 or more.
-        let liftedFill = fillColor.blended(withFraction: 0.35, of: .white) ?? fillColor
+        let liftedFill = fillColor.blended(withFraction: 0.38, of: .white) ?? fillColor
         return EditorConsolePalette(
             fill: Color(nsColor: fillColor),
             stroke: Color(nsColor: RecorderStyle.adaptive(paletteRGB(lightStroke), fillColor)),
             ink: Color(nsColor: paletteRGB(ink)),
             soft: Color(nsColor: RecorderStyle.adaptive(
-                fillColor.withAlphaComponent(0.2), fillColor.withAlphaComponent(0.2)
+                fillColor.withAlphaComponent(0.24), fillColor.withAlphaComponent(0.20)
             )),
             softInk: Color(nsColor: RecorderStyle.adaptive(paletteRGB(ink), liftedFill)),
-            text: Color(nsColor: RecorderStyle.adaptive(paletteRGB(lightText), fillColor))
+            text: Color(nsColor: RecorderStyle.adaptive(paletteRGB(lightText), fillColor)),
+            fillNSColor: fillColor
         )
     }
 
-    // Each ink is the fill's own deep shade (contrast on the fill 5.6–8.5:1).
-    static let frame = vivid(fill: 0x5AAEFF, lightStroke: 0x1E73E8, ink: 0x062B57, lightText: 0x1A66D2)
-    static let opening = vivid(fill: 0xFF8550, lightStroke: 0xDD4A12, ink: 0x4A1600, lightText: 0xC2410A)
-    static let zoom = vivid(fill: 0xFFB830, lightStroke: 0xC27A00, ink: 0x4A2C00, lightText: 0x9A6200)
-    static let cursor = vivid(fill: 0xB5E655, lightStroke: 0x578C00, ink: 0x283A00, lightText: 0x4A7A00)
-    static let camera = vivid(fill: 0xFF6B92, lightStroke: 0xDC2C5C, ink: 0x4D0A24, lightText: 0xC8264F)
-    static let audio = vivid(fill: 0x3DDBB0, lightStroke: 0x008F68, ink: 0x003F2E, lightText: 0x007A5A)
+    // MARK: 配色角色（UX-184 第六轮）
+    //
+    // 1. 全编辑页与侧边栏全部统一使用石墨黑（EditorTheme.platinumAccent）：
+    //    顶层导航、子菜单分段选择、滑块、旋钮、开关、主按钮、缩略图选中框、主录屏轨与波形。
+    // 2. 时间线效果轨道与「轨道显示」弹窗保持一轨一色、同行片段同色（避开蓝紫）：
+    //    缩放（青柠绿）、屏幕 3D（暖琥珀黄）、摄像运动（暖珊瑚橙）、叠加（清透青绿）、摄像同步（暖玫红）。
 
+    static let frame = Track.primary
+    static let opening = Track.primary
+    static let zoom = Track.primary
+    static let cursor = Track.primary
+    static let camera = Track.primary
+    static let audio = Track.primary
+
+    /// 时间线轨道色：五条效果轨色相拉开（绿 80°、琥珀 45°、珊瑚 18°、
+    /// 青绿 172°、玫红 340°），亮度相近，避开蓝紫；主录屏轨保持黑。
+    enum Track {
+        /// 屏幕录制：黑色主色，不染色。
+        static let primary = EditorConsolePalette(
+            fill: EditorTheme.platinumAccent,
+            stroke: EditorTheme.platinumAccent,
+            ink: EditorTheme.onAccent,
+            soft: EditorTheme.selectionWash,
+            softInk: EditorTheme.primaryText,
+            text: EditorTheme.primaryText,
+            fillNSColor: NSColor(calibratedWhite: 0.12, alpha: 1)
+        )
+        /// 缩放：青柠绿（与「运镜」页点缀色一致）。
+        static let zoom = vivid(fill: 0xB5E655, lightStroke: 0x5A9E1C, ink: 0x223400, lightText: 0x2F5A05)
+        /// 屏幕 3D：琥珀黄。
+        static let screenMotion = vivid(fill: 0xF7C548, lightStroke: 0xB98200, ink: 0x3A2800, lightText: 0x6E4E00)
+        /// 摄像运动：珊瑚橙（与「摄像头」页点缀色一致）。
+        static let cameraMotion = vivid(fill: 0xFF8A5C, lightStroke: 0xDD5420, ink: 0x3D1200, lightText: 0x86300C)
+        /// 叠加（柔化／突出／贴图）：青绿。
+        static let overlay = vivid(fill: 0x45CBB8, lightStroke: 0x0F8C7A, ink: 0x00352D, lightText: 0x0A5E52)
+        /// 摄像同步：玫红（只在校正同步时出现的曲线轨）。
+        static let cameraSync = vivid(fill: 0xF27E9F, lightStroke: 0xD03B67, ink: 0x4A0A22, lightText: 0x9E2449)
+    }
+
+    /// 主片段波形：中性石墨灰，大面积内容不染色。
+    static let waveformInk = Color(nsColor: RecorderStyle.adaptive(
+        NSColor(calibratedWhite: 0, alpha: 0.34),
+        NSColor(calibratedWhite: 1, alpha: 0.40)
+    ))
+
+    /// 侧栏页面点缀色（只给滑块与分段子选项使用）。
     static func palette(for tab: InspectorTab) -> EditorConsolePalette {
         switch tab {
         case .frame: frame
@@ -73,17 +114,24 @@ enum EditorConsole {
         }
     }
 
-    /// The identity of a selected object. Mosaics and stickers belong to the
-    /// opening/overlay family; anything about the screen itself is "frame".
+    /// 画布／时间线上被选中对象的身份色 = 它所在轨道的颜色。
     static func palette(for selection: EditorSelection) -> EditorConsolePalette {
         switch selection {
-        case .canvas, .screen, .primarySegment, .crop: frame
-        case .zoomTrack, .zoom, .screenMotionTrack, .screenMotion: zoom
-        case .cursor: cursor
-        case .camera, .cameraMotion: camera
-        case .audio: audio
-        case .mosaic, .sticker: opening
+        case .canvas, .screen, .primarySegment, .crop, .cursor, .audio: Track.primary
+        case .zoomTrack, .zoom: Track.zoom
+        case .screenMotionTrack, .screenMotion: Track.screenMotion
+        case .camera, .cameraMotion: Track.cameraMotion
+        case .mosaic, .sticker: Track.overlay
         }
+    }
+}
+
+extension EditorConsolePalette {
+    func adaptiveWash(lightAlpha: CGFloat, darkAlpha: CGFloat) -> Color {
+        Color(nsColor: RecorderStyle.adaptive(
+            fillNSColor.withAlphaComponent(lightAlpha),
+            fillNSColor.withAlphaComponent(darkAlpha)
+        ))
     }
 }
 
