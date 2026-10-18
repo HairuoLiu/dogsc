@@ -624,6 +624,25 @@ enum RecorderPanelPolicy {
         return NSSize(width: ceil(size.width), height: ceil(size.height))
     }
 
+    static func measuredWindowLayout(_ layout: RecorderIslandLayout) -> RecorderIslandLayout? {
+        guard let canvas = measuredContentSize(layout.canvasSize),
+              let placement = measuredContentSize(layout.placementSize),
+              canvas.width >= placement.width, canvas.height >= placement.height else { return nil }
+        return RecorderIslandLayout(canvasSize: canvas, placementSize: placement)
+    }
+
+    static func frame(
+        centeredOn currentFrame: NSRect,
+        layout: RecorderIslandLayout,
+        visibleFrame: NSRect?
+    ) -> NSRect {
+        // Constrain the visible capsule, not its temporary drawing margin.
+        let placement = frame(centeredOn: currentFrame,
+            contentSize: layout.placementSize, visibleFrame: visibleFrame)
+        return frame(centeredOn: placement,
+            contentSize: layout.canvasSize, visibleFrame: nil)
+    }
+
     /// Resize around the current visual center and clamp the result into the
     /// selected screen. This avoids the old left-edge anchored collapse and
     /// preserves the destination screen after a cross-display drag.
@@ -669,7 +688,8 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
     private let hostingView: RecorderHostingView<RecorderMainWindowRoot>
     private var hasPositionedPanel = false
     private var currentPhase: AppPhase
-    private var measuredContentSize: NSSize?
+    private var measuredWindowLayout: RecorderIslandLayout?
+    private var contentPresentationRevision: UInt64 = 0
     private var selectionIsActive = false
     private var selectionSource: CaptureSource?
     private let transition = RecorderPanelTransition()
@@ -687,7 +707,12 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
         )
             ?? RecorderPanelPolicy.setupSize
         hostingView = RecorderHostingView(
-            rootView: RecorderMainWindowRoot(model: model, phase: model.phase)
+            rootView: RecorderMainWindowRoot(
+                model: model,
+                phase: model.phase,
+                presentationRevision: 0,
+                acceptsMeasurement: { false }
+            )
         )
         panel = RecorderPanel(
             contentRect: NSRect(origin: .zero, size: initialSize),
@@ -696,6 +721,7 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
             defer: false
         )
         super.init()
+        contentPresentationRevision &+= 1
         hostingView.rootView = makeRoot(for: model.phase)
         configurePanel(initialSize: initialSize)
     }
@@ -707,25 +733,36 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
     }
 
     private func makeRoot(for phase: AppPhase) -> RecorderMainWindowRoot {
-        RecorderMainWindowRoot(model: model, phase: phase,
-            onContentSizeChange: { [weak self] size in
-                self?.resizeContent(to: size, for: phase)
+        let revision = contentPresentationRevision
+        return RecorderMainWindowRoot(model: model, phase: phase,
+            presentationRevision: revision,
+            onWindowLayoutChange: { [weak self] layout in
+                self?.resizeContent(to: layout, for: phase, revision: revision)
+            },
+            acceptsMeasurement: { [weak self] in
+                guard let self else { return false }
+                return revision == self.contentPresentationRevision
+                    && phase == self.currentPhase
             })
     }
 
-    private func resizeContent(to requested: NSSize, for phase: AppPhase) {
-        guard phase == currentPhase,
+    private func resizeContent(
+        to requested: RecorderIslandLayout,
+        for phase: AppPhase,
+        revision: UInt64
+    ) {
+        guard revision == contentPresentationRevision, phase == currentPhase,
               RecorderPanelPolicy.contentSize(for: phase,
                 recordsMicrophone: model.configuration.recordsMicrophone) != nil,
-              let size = RecorderPanelPolicy.measuredContentSize(requested) else { return }
-        measuredContentSize = size
-        guard panel.frame.size != size else { return }
+              let layout = RecorderPanelPolicy.measuredWindowLayout(requested) else { return }
+        measuredWindowLayout = layout
         let destination = RecorderPanelPolicy.frame(
-            centeredOn: panel.frame, contentSize: size,
+            centeredOn: panel.frame, layout: layout,
             visibleFrame: panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
         )
-        panel.contentMinSize = size
-        panel.contentMaxSize = size
+        guard panel.frame != destination else { return }
+        panel.contentMinSize = layout.canvasSize
+        panel.contentMaxSize = layout.canvasSize
         // Preserve the host, focus, press state and current screen. This runs
         // only for real content size changes, never for pointer drag updates.
         panel.setFrame(destination, display: true, animate: false)
@@ -736,7 +773,10 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
     func present(phase: AppPhase) {
         let positionedFrame = hasPositionedPanel ? panel.frame : nil
         let phaseChanged = currentPhase != phase
-        if phaseChanged { measuredContentSize = nil }
+        if phaseChanged {
+            measuredWindowLayout = nil
+            contentPresentationRevision &+= 1
+        }
         // Saving a corner result should return the recorder quietly while
         // the user's other application keeps its typing focus.
         let returnsFromCompletion = currentPhase == .recordingComplete && phase == .setup
@@ -759,7 +799,9 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
             transition.hide(panel, animated: false)
             return
         }
-        let contentSize = measuredContentSize ?? fallbackSize
+        let layout = measuredWindowLayout ?? .compact(fallbackSize)
+        let contentSize = layout.canvasSize
+        let keepsAnimationCanvas = phaseChanged && hasPositionedPanel && panel.isVisible
 
         panel.level = CaptureWindowLevelPolicy.level(for: .recorderPanel(
             phase: phase,
@@ -768,7 +810,7 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
         // CaptureSurfaceFilter excludes this process's helper windows. Keep
         // the panel readable by other recorders throughout every phase.
         panel.sharingType = .readOnly
-        if phaseChanged || phase != .recording {
+        if !keepsAnimationCanvas && (phaseChanged || phase != .recording) {
             panel.contentMinSize = contentSize
             panel.contentMaxSize = contentSize
         }
@@ -810,7 +852,7 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
 
         let destination = RecorderPanelPolicy.frame(
             centeredOn: positionedFrame ?? panel.frame,
-            contentSize: contentSize,
+            layout: layout,
             visibleFrame: panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
         )
 
@@ -822,7 +864,11 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0
                 context.allowsImplicitAnimation = false
-                panel.setFrame(destination, display: false, animate: false)
+                // Do not collapse to a phase's bootstrap frame before SwiftUI
+                // measures it and reserves space for the original size spring.
+                if !keepsAnimationCanvas {
+                    panel.setFrame(destination, display: false, animate: false)
+                }
                 if phaseChanged {
                     hostingView.rootView = makeRoot(for: phase)
                 }
@@ -834,7 +880,7 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
         }
 
         logger.info(
-            "phase=\(String(describing: phase), privacy: .public) frame=\(destination.width, privacy: .public)x\(destination.height, privacy: .public)"
+            "phase=\(String(describing: phase), privacy: .public) frame=\(self.panel.frame.width, privacy: .public)x\(self.panel.frame.height, privacy: .public)"
         )
         guard !hidesSetupForSelection else {
             transition.hide(panel, animated: true)
@@ -944,8 +990,12 @@ final class RecorderPanelController: NSObject, NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {
         guard hasPositionedPanel, notification.object as? NSWindow === panel else { return }
         panel.refreshPointerInteraction()
+        let savedFrame = measuredWindowLayout.map {
+            RecorderPanelPolicy.frame(centeredOn: panel.frame,
+                contentSize: $0.placementSize, visibleFrame: nil)
+        } ?? panel.frame
         UserDefaults.standard.set(
-            NSStringFromRect(panel.frame),
+            NSStringFromRect(savedFrame),
             forKey: RecorderPanelPolicy.savedFrameKey
         )
     }

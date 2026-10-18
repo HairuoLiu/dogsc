@@ -295,6 +295,22 @@ struct EditorMediaRequest: Equatable, Sendable {
         Self.mediaManifestMatchesForPreparation(mediaManifest, manifest)
     }
 
+    /// A cut changes placement, not source-file metadata. Reuse only within
+    /// the same editor and file versions, with the same declared audio/video.
+    func canReuseSourceTracks(from other: EditorMediaRequest) -> Bool {
+        editorSessionID == other.editorSessionID
+            && source == other.source
+            && camera == other.camera
+            && microphone == other.microphone
+            && (mediaManifest?.camera != nil) == (other.mediaManifest?.camera != nil)
+            && (mediaManifest?.microphone != nil) == (other.mediaManifest?.microphone != nil)
+            && [source, camera, microphone].compactMap { $0 }.allSatisfy {
+                // Session inputs are pinned; an external in-place replacement
+                // must still invalidate reuse before another timeline edit.
+                $0.version == EditorMediaFileVersion(url: $0.url)
+            }
+    }
+
     func updatingMediaManifest(_ manifest: ProjectMediaManifest?) -> EditorMediaRequest {
         EditorMediaRequest(
             editorSessionID: editorSessionID,
@@ -358,6 +374,25 @@ struct EditorPreparedMediaPayload {
     /// Original camera track retained for cheap metadata-only timing rebuilds.
     /// It is never decoded here and does not reopen the source file.
     let cameraSource: EditorPreparedCameraSource?
+    let sourceTracks: TimelinePreparedSourceTracks?
+
+    init(
+        composition: TimelineCompositionBundle,
+        inventories: EditorMediaInventories,
+        sourceDisplaySize: CGSize,
+        cameraDisplaySize: CGSize?,
+        cameraContentCrop: NormalizedCrop?,
+        cameraSource: EditorPreparedCameraSource?,
+        sourceTracks: TimelinePreparedSourceTracks? = nil
+    ) {
+        self.composition = composition
+        self.inventories = inventories
+        self.sourceDisplaySize = sourceDisplaySize
+        self.cameraDisplaySize = cameraDisplaySize
+        self.cameraContentCrop = cameraContentCrop
+        self.cameraSource = cameraSource
+        self.sourceTracks = sourceTracks
+    }
 }
 
 struct EditorPreparedCameraSource {
@@ -588,7 +623,16 @@ final class EditorMediaSession: ObservableObject {
         state = .preparing(generation: requestedGeneration)
 
         do {
-            let payload = try await preparation(request)
+            let payload: EditorPreparedMediaPayload
+            if let previous = lastReadyMedia,
+               request.canReuseSourceTracks(from: previous.request),
+               let rebuilt = try TimelinePreviewCompositionLoader.rebuild(
+                   request: request, reusing: previous.payload
+               ) {
+                payload = rebuilt
+            } else {
+                payload = try await preparation(request)
+            }
             try Task.checkCancellation()
             guard generation == requestedGeneration,
                   currentRequest == request else { return }
@@ -672,7 +716,8 @@ final class EditorMediaSession: ObservableObject {
                 sourceDisplaySize: ready.sourceDisplaySize,
                 cameraDisplaySize: ready.cameraDisplaySize,
                 cameraContentCrop: ready.cameraContentCrop,
-                cameraSource: ready.payload.cameraSource
+                cameraSource: ready.payload.cameraSource,
+                sourceTracks: ready.payload.sourceTracks
             )
             let updated = EditorPreparedMedia(
                 generation: ready.generation,

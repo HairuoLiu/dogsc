@@ -1107,14 +1107,14 @@ struct CursorClickEffectStylePicker: View {
                             CursorClickEffectPreviewGlyph(
                                 style: style,
                                 isActive: isPreviewing,
-                                color: isSelected ? (palette?.stroke ?? EditorTheme.selectionTint) : Color.secondary
+                                color: isSelected ? (palette?.ink ?? EditorTheme.primaryText) : Color.secondary
                             )
                             Text(appLocalized(shortName(for: style)))
                                 .font(.appUI(size: 11, weight: isSelected ? .medium : .regular))
                                 .lineLimit(1)
                         }
                         .foregroundStyle(
-                            isSelected ? Color.primary : Color.secondary
+                            isSelected ? (palette?.ink ?? EditorTheme.primaryText) : Color.secondary
                         )
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)

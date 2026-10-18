@@ -94,21 +94,37 @@ final class FirstLaunchGuideAccess: ObservableObject {
     @Published var isAvailable = false
 }
 
-/// Phase-pinned content hosted by `RecorderPanelController`. The native window
-/// follows the island's measured size; its shadow is drawn outside the window
-/// by AppKit, so transparent padding never blocks placement at a screen edge.
+private struct RecorderIslandLayoutMeasurement: Equatable {
+    let presentationRevision: UInt64
+    let size: CGSize
+}
+
+private struct RecorderIslandLayoutReporter {
+    let report: (RecorderIslandLayout) -> Void
+    let acceptsMeasurement: () -> Bool
+}
+
+/// Keep the v0.1.5 size spring inside a temporary drawing canvas. AppKit only
+/// reserves/reclaims that canvas; SwiftUI remains the sole animation owner.
 struct RecorderMainWindowRoot: View {
     @ObservedObject var model: AppModel
     let phase: AppPhase
-    var onContentSizeChange: (CGSize) -> Void = { _ in }
+    let presentationRevision: UInt64
+    var onWindowLayoutChange: (RecorderIslandLayout) -> Void = { _ in }
+    var acceptsMeasurement: () -> Bool = { true }
     @State private var islandSize = CGSize.zero
+    @State private var windowLayout = RecorderIslandLayout.compact(.zero)
+    @State private var sizeAnimationRevision: UInt64 = 0
+    @State private var layoutReporter: RecorderIslandLayoutReporter?
 
     var body: some View {
         ZStack {
             RecorderSurfaceShape(radius: islandSize.height / 2)
                 .frame(width: islandSize.width, height: islandSize.height)
                 .allowsHitTesting(false)
-            Group {
+            // Keep entering and retiring controls inside the same animated
+            // capsule as the surface, independent of their intrinsic sizes.
+            ZStack {
                 switch phase {
                 case .setup:
                     island { SetupView(model: model) }
@@ -142,6 +158,8 @@ struct RecorderMainWindowRoot: View {
                     }
                 }
             }
+            .frame(width: islandSize.width, height: islandSize.height)
+            .clipShape(Capsule())
         }
         .background {
             RecorderIslandInteractionRegion()
@@ -150,8 +168,10 @@ struct RecorderMainWindowRoot: View {
         }
         .contentShape(Capsule())
         .modifier(RecorderSystemWindowDragModifier())
-        .fixedSize()
+        .animation(RecorderMotion.morph, value: islandSize)
         .animation(RecorderMotion.morph, value: phase)
+        .frame(width: windowLayout.canvasSize.width, height: windowLayout.canvasSize.height)
+        .animation(nil, value: windowLayout)
         .font(.appUI(.body))
         .appControlFocusAppearance()
     }
@@ -159,22 +179,65 @@ struct RecorderMainWindowRoot: View {
     private func island<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         content()
             .fixedSize()
-            .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
-                guard size.width > 0, size.height > 0 else { return }
-                // The surface and native frame share the same measured bounds.
-                // Interpolating only the surface inside a compact window clips
-                // it during a shrink or leaves an oversized invisible target.
-                var layout = Transaction(animation: nil)
-                layout.disablesAnimations = true
-                withTransaction(layout) {
-                    islandSize = size
-                    onContentSizeChange(size)
-                }
-            }
-            .onAppear {
-                if islandSize != .zero { onContentSizeChange(islandSize) }
+            .onGeometryChange(for: RecorderIslandLayoutMeasurement.self) { geometry in
+                RecorderIslandLayoutMeasurement(
+                    presentationRevision: presentationRevision,
+                    size: geometry.size
+                )
+            } action: { measurement in
+                let size = measurement.size
+                guard measurement.presentationRevision == presentationRevision,
+                      acceptsMeasurement(),
+                      size.width.isFinite, size.height.isFinite,
+                      size.width > 0, size.height > 0 else { return }
+                updateIslandSize(size)
             }
             .transition(.recorderContent)
+    }
+
+    private func updateIslandSize(_ size: CGSize) {
+        // A same-size return to setup still needs the current presentation's
+        // reporter. A running spring may finish after its old phase retired.
+        layoutReporter = RecorderIslandLayoutReporter(
+            report: onWindowLayoutChange,
+            acceptsMeasurement: acceptsMeasurement
+        )
+        guard size != islandSize else {
+            onWindowLayoutChange(windowLayout)
+            return
+        }
+        sizeAnimationRevision &+= 1
+        let revision = sizeAnimationRevision
+        if islandSize == .zero || RecorderMotion.reduces {
+            withoutSizeAnimation {
+                islandSize = size
+                windowLayout = .compact(size)
+                onWindowLayoutChange(windowLayout)
+            }
+            return
+        }
+
+        withoutSizeAnimation {
+            windowLayout = .morph(from: islandSize, to: size, retaining: windowLayout)
+            onWindowLayoutChange(windowLayout)
+        }
+        withAnimation(RecorderMotion.morph, completionCriteria: .removed) {
+            islandSize = size
+        } completion: {
+            guard revision == sizeAnimationRevision else { return }
+            withoutSizeAnimation {
+                windowLayout = .compact(size)
+                if let layoutReporter, layoutReporter.acceptsMeasurement() {
+                    layoutReporter.report(windowLayout)
+                }
+            }
+        }
+    }
+
+    private func withoutSizeAnimation(_ action: () -> Void) {
+        var layout = Transaction(animation: nil)
+        layout.disablesAnimations = true
+        withTransaction(layout, action)
     }
 }
 
@@ -224,7 +287,9 @@ struct RecorderPhaseProgressView: View {
         HStack(spacing: 10) {
             ProgressView().controlSize(.small)
             Text(title).font(.appUI(size: 13, weight: .medium))
-                .contentTransition(.opacity)
+                .fixedSize(horizontal: true, vertical: false)
+                .contentTransition(.identity)
+                .transaction { $0.animation = nil }
         }
         .foregroundStyle(RecorderStyle.ink)
         .padding(.horizontal, 20)

@@ -537,15 +537,15 @@ func zoomTimeline(width: CGFloat, duration: TimeInterval) -> some View {
                 stepTimeline(byFrames: stepCount)
                 return nil
             case 12 where !hasEditingModifier && !event.isARepeat: // Q
-                Task { @MainActor in rippleDeleteBeforePlayhead() }
+                rippleDeleteBeforePlayhead()
                 return nil
             case 13 where !hasEditingModifier && !event.isARepeat: // W
-                Task { @MainActor in rippleDeleteAfterPlayhead() }
+                rippleDeleteAfterPlayhead()
                 return nil
             case 2 where !hasEditingModifier && !event.isARepeat: // D
                 return removeCurrentTimelineSelection() ? nil : event
             case 1 where !hasEditingModifier && !event.isARepeat: // S
-                Task { @MainActor in splitCurrentTimelineSelectionAtPlayhead() }
+                splitCurrentTimelineSelectionAtPlayhead()
                 return nil
             case 51 where !event.isARepeat, // Delete
                  117 where !event.isARepeat: // Forward delete

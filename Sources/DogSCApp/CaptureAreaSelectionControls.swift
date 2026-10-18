@@ -340,6 +340,12 @@ final class MousePassthroughLabel: NSTextField {
 }
 
 final class EscapeHintContentView: NSView {
+    var showsStartShortcut = false {
+        didSet {
+            guard showsStartShortcut != oldValue else { return }
+            refreshLanguage()
+        }
+    }
     var interfaceScale: CGFloat = 1 {
         didSet { needsDisplay = true }
     }
@@ -359,12 +365,14 @@ final class EscapeHintContentView: NSView {
     }
 
     func refreshLanguage() {
-        setAccessibilityLabel(appLocalized("拖动选择录制区域，按 Esc 取消"))
+        setAccessibilityLabel(appLocalized(showsStartShortcut
+            ? "按空格开始录制，按 Esc 取消"
+            : "拖动选择录制区域，按 Esc 取消"))
         needsDisplay = true
     }
 
     private func lines(for scale: CGFloat) -> (title: CTLine, key: CTLine) {
-        (makeLine(appLocalized("拖动选择录制区域"), font: .systemFont(ofSize: 13 * scale, weight: .semibold), color: captureSelectionInkNSColor),
+        (makeLine(appLocalized(showsStartShortcut ? "按空格开始录制" : "拖动选择录制区域"), font: .systemFont(ofSize: 13 * scale, weight: .semibold), color: captureSelectionInkNSColor),
          makeLine("esc", font: .systemFont(ofSize: 11 * scale, weight: .semibold),
                   color: captureSelectionInkNSColor.withAlphaComponent(0.56)))
     }

@@ -1217,8 +1217,6 @@ struct EditorView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(tint.opacity(showsProgress ? 0.10 : 0.13))
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(tint.opacity(showsProgress ? 0.20 : 0.30), lineWidth: 0.75)
 
                 if showsProgress {
                     ProgressView()
@@ -1247,35 +1245,16 @@ struct EditorView: View {
         .padding(.horizontal, isBlocking ? 14 : 12)
         .padding(.vertical, isBlocking ? 12 : 10)
         .frame(maxWidth: isBlocking ? 320 : 280, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [
-                    EditorTheme.panelRaised.opacity(0.98),
-                    EditorTheme.panelSurface.opacity(0.98)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            ),
-            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
-        )
+        .background(EditorTheme.cardElevated, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [EditorTheme.chrome(0.18), EditorTheme.chrome(0.055)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.75
-                )
+                .strokeBorder(EditorTheme.chrome(0.08), lineWidth: 0.5)
+                .allowsHitTesting(false)
         }
-        .overlay(alignment: .top) {
-            Capsule()
-                .fill(EditorTheme.chrome(0.12))
-                .frame(height: 1)
-                .padding(.horizontal, 12)
-        }
-        .shadow(color: EditorTheme.softShadow.opacity(0.72), radius: 14, y: 6)
+        // Cast one shadow from the opaque card, not from its text/spinner or
+        // a second highlight strip that forms a double outline on entrance.
+        .compositingGroup()
+        .shadow(color: EditorTheme.softShadow.opacity(0.28), radius: 10, y: 4)
         .transition(
             .asymmetric(
                 insertion: .opacity.combined(with: .scale(scale: 0.985)),

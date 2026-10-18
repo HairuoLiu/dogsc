@@ -380,6 +380,8 @@ enum AppDialogPresenter {
         panel.setFrame(NSRect(x: min(max(anchor.midX - size.width / 2, visible.minX + 16), visible.maxX - size.width - 16),
                               y: min(max(proposedY, visible.minY + 16), visible.maxY - size.height - 16),
                               width: size.width, height: size.height), display: false)
+        host.view.layoutSubtreeIfNeeded()
+        AppWindowSurface.clip(host.view, radius: 28)
         dismissActive = { finish(.init(actionID: nil)) }
         FirstUseTourController.setAppDialogPresented(true)
         let closeObserver = owner.map { window in

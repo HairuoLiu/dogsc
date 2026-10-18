@@ -14,19 +14,18 @@ final class RecorderMemoStore: ObservableObject {
     @Published var text: String { didSet { scheduleSave() } }
     @Published var fontSize: Double { didSet { scheduleSave() } }
     @Published var opacity: Double { didSet { scheduleSave() } }
-    @Published var isEditing: Bool
+    private let defaults: UserDefaults
     private var pendingSave: Task<Void, Never>?
     private var hasChanges = false
 
-    init() {
-        let defaults = UserDefaults.standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         let savedText = defaults.string(forKey: Key.text) ?? ""
         text = savedText
         let savedSize = defaults.object(forKey: Key.fontSize) as? Double ?? 22
         let savedOpacity = defaults.object(forKey: Key.opacity) as? Double ?? 0.92
         fontSize = savedSize.isFinite ? min(max(savedSize, 16), 40) : 22
         opacity = savedOpacity.isFinite ? min(max(savedOpacity, 0.55), 1) : 0.92
-        isEditing = savedText.isEmpty
     }
 
     private func scheduleSave() {
@@ -43,7 +42,6 @@ final class RecorderMemoStore: ObservableObject {
         pendingSave = nil
         guard hasChanges else { return }
         hasChanges = false
-        let defaults = UserDefaults.standard
         defaults.set(text, forKey: Key.text)
         defaults.set(fontSize, forKey: Key.fontSize)
         defaults.set(opacity, forKey: Key.opacity)
@@ -231,11 +229,6 @@ private struct RecorderMemoView: View {
                 // The empty stretch of the bar is the handle the sheet moves by.
                 Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay { RecorderMemoWindowHandle(resizes: false) }
-                control(store.isEditing ? "pencil" : "eye", title: store.isEditing ? "切换到阅读，避免误改文稿" : "编辑备忘录") {
-                    store.isEditing.toggle()
-                    store.save()
-                }
-                .accessibilityIdentifier("recorder.memo.mode")
                 control("textformat.size.smaller", title: "缩小备忘录字号", enabled: store.fontSize > 16) {
                     store.fontSize = max(16, store.fontSize - 2)
                 }
@@ -253,7 +246,7 @@ private struct RecorderMemoView: View {
             .padding(.horizontal, 6)
 
             ZStack(alignment: .topLeading) {
-                RecorderMemoTextView(text: $store.text, fontSize: store.fontSize, isEditing: store.isEditing)
+                RecorderMemoTextView(text: $store.text, fontSize: store.fontSize)
                 if store.text.isEmpty {
                     Text("写下或粘贴要讲的内容…")
                         .font(.system(size: store.fontSize)).foregroundStyle(RecorderStyle.faint)
@@ -278,7 +271,6 @@ private struct RecorderMemoView: View {
             Color.clear.frame(width: 18, height: 18)
                 .overlay { RecorderMemoWindowHandle(resizes: true) }
         }
-        .animation(RecorderMotion.quick, value: store.isEditing)
         .accessibilityIdentifier("recorder.memo.content")
     }
 
@@ -301,7 +293,6 @@ private struct RecorderMemoTextView: NSViewRepresentable {
     @Environment(\.locale) private var locale
     @Binding var text: String
     let fontSize: Double
-    let isEditing: Bool
 
     func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
     func makeNSView(context: Context) -> NSScrollView {
@@ -338,7 +329,7 @@ private struct RecorderMemoTextView: NSViewRepresentable {
         context.coordinator.text = $text
         guard let view = scroll.documentView as? NSTextView else { return }
         view.setAccessibilityLabel(appLocalized("备忘录文稿"))
-        view.isEditable = isEditing
+        view.isEditable = true
         view.isSelectable = true
         if view.string != text, !view.hasMarkedText() { view.string = text }
         if view.font?.pointSize != CGFloat(fontSize) {
@@ -361,6 +352,38 @@ private struct RecorderMemoTextView: NSViewRepresentable {
     }
 
     final class MemoTextView: NSTextView {
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        // The recorder hides its editor menu. Keep standard text commands
+        // local to the focused memo instead of relying on those hidden items.
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {
+            guard window?.firstResponder === self, event.type == .keyDown,
+                  let key = event.charactersIgnoringModifiers?.lowercased()
+            else { return super.performKeyEquivalent(with: event) }
+            let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+            if modifiers == [.command, .shift], key == "z" {
+                if let manager = undoManager, manager.canRedo {
+                    manager.redo()
+                    didChangeText()
+                }
+                return true
+            }
+            guard modifiers == [.command] else { return super.performKeyEquivalent(with: event) }
+            switch key {
+            case "a": selectAll(nil)
+            case "c": copy(nil)
+            case "x": cut(nil)
+            case "v": pasteAsPlainText(nil)
+            case "z":
+                if let manager = undoManager, manager.canUndo {
+                    manager.undo()
+                    didChangeText()
+                }
+            default: return super.performKeyEquivalent(with: event)
+            }
+            return true
+        }
+
         override func viewDidChangeEffectiveAppearance() {
             super.viewDidChangeEffectiveAppearance()
             // Refresh glyph attributes and caret without replacing the text,

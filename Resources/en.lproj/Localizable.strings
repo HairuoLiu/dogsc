@@ -1786,6 +1786,8 @@
 "录制区域高度（像素）" = "Recording Area Height (Pixels)";
 "按 Esc 取消区域选择" = "Press Esc to cancel area selection";
 "按 Return 开始录制" = "Press Return to start recording";
+"按空格开始录制" = "Press Space to record";
+"按空格开始录制，按 Esc 取消" = "Press Space to start recording. Press Esc to cancel.";
 "宽高比例已锁定" = "Aspect ratio locked";
 "宽高比例未锁定" = "Aspect ratio unlocked";
 "锁定宽高比例" = "Lock Aspect Ratio";

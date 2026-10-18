@@ -518,6 +518,10 @@ private final class CaptureAreaSelectionView: NSView {
 
         configureEscapeHint()
         languageBinding = AppLanguageBinding { [weak self] in self?.refreshLanguage() }
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(screenParametersDidChange(_:)),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil
+        )
     }
 
     private func refreshLanguage() {
@@ -604,6 +608,12 @@ private final class CaptureAreaSelectionView: NSView {
         layoutEscapeHint(scale: interfaceScale)
     }
 
+    @objc private func screenParametersDidChange(_ notification: Notification) {
+        // A Dock move/resize must not leave a toolbar animation targeting the
+        // old available area. The recording rectangle itself is unchanged.
+        stopSizeTransition()
+    }
+
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         if newWindow == nil { stopSizeTransition() }
         super.viewWillMove(toWindow: newWindow)
@@ -671,22 +681,9 @@ private final class CaptureAreaSelectionView: NSView {
     }
 
     private func controlCardFrame(for rect: CGRect, scale: CGFloat) -> CGRect {
-        let height: CGFloat = 60 * scale
-        let width: CGFloat = 642 * scale
-        let inset: CGFloat = 12 * scale
-        let gap: CGFloat = 14 * scale
-        let below = rect.minY - height - gap
-        let above = rect.maxY + gap
-        let y: CGFloat
-        if below >= bounds.minY + inset {
-            y = below
-        } else if above + height <= bounds.maxY - inset {
-            y = above
-        } else {
-            y = min(max(below, bounds.minY + inset), bounds.maxY - height - inset)
-        }
-        let x = min(max(rect.midX - width / 2, bounds.minX + inset), bounds.maxX - width - inset)
-        return CGRect(x: x, y: y, width: width, height: height)
+        CaptureAreaSelectionLayout.toolbarFrame(
+            for: rect, in: controlsAvailableBounds, scale: scale
+        )
     }
 
     private func refreshControlHover() {
@@ -738,15 +735,25 @@ private final class CaptureAreaSelectionView: NSView {
     }
 
     private func layoutEscapeHint(scale: CGFloat) {
-        escapeHintCard.isHidden = selectionRect != nil || dragOperation != nil
+        let ready = hasValidSelection && dragOperation == nil
+        escapeHintContent.showsStartShortcut = ready
+        escapeHintCard.isHidden = dragOperation != nil
         let escapeHintWidth = escapeHintContent.preferredWidth(for: scale)
         let hintHeight: CGFloat = 44 * scale
-        escapeHintCard.frame = CGRect(
-            x: bounds.midX - escapeHintWidth / 2,
-            y: bounds.midY - hintHeight / 2,
-            width: escapeHintWidth,
+        let available = controlsAvailableBounds
+        var hintFrame = CGRect(
+            x: available.midX - min(escapeHintWidth, available.width) / 2,
+            y: available.midY - hintHeight / 2,
+            width: min(escapeHintWidth, available.width),
             height: hintHeight
         )
+        if ready, !controlCard.isHidden,
+           hintFrame.intersects(controlCard.frame.insetBy(dx: -12 * scale, dy: -12 * scale)) {
+            // Keep the keyboard hint off the toolbar's native hit targets.
+            hintFrame.origin.y = available.maxY - hintHeight - 12 * scale
+            escapeHintCard.isHidden = hintFrame.intersects(controlCard.frame)
+        }
+        escapeHintCard.frame = hintFrame
         escapeHintCard.layer?.cornerRadius = hintHeight / 2
         escapeHintCard.layer?.cornerCurve = .continuous
         escapeHintContent.frame = escapeHintCard.bounds
@@ -827,6 +834,12 @@ private final class CaptureAreaSelectionView: NSView {
         if event.keyCode == 53 {
             onComplete?(nil)
         } else if event.keyCode == 36 {
+            confirmSelection(nil)
+        } else if event.keyCode == 49, !event.isARepeat,
+                  event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+                  window?.firstResponder === self, hasValidSelection, dragOperation == nil {
+            // Only the drawing canvas owns this shortcut. Space in a size
+            // field or a focused native button retains its normal behavior.
             confirmSelection(nil)
         } else {
             super.keyDown(with: event)
@@ -1179,7 +1192,18 @@ private final class CaptureAreaSelectionView: NSView {
     // Compact only the toolbar; region geometry and drag handles retain their
     // existing screen scale, independent of the toolbar's visual size.
     private var controlCardScale: CGFloat {
-        min(0.85, interfaceScale)
+        CaptureAreaSelectionLayout.scale(
+            in: controlsAvailableBounds, preferred: min(0.85, interfaceScale)
+        )
+    }
+
+    private var controlsAvailableBounds: CGRect {
+        guard let window, let screen = window.screen else { return bounds }
+        // NSScreen is global bottom-left geometry; convert through the actual
+        // window so secondary/negative-origin screens share the same rule.
+        let local = convert(window.convertFromScreen(screen.visibleFrame), from: nil)
+            .intersection(bounds)
+        return local.isEmpty || local.isNull ? bounds : local
     }
 
     private var interfaceScale: CGFloat {

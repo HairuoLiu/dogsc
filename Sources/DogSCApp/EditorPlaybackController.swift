@@ -459,57 +459,66 @@ final class EditorPlaybackController: ObservableObject {
             return output
         }
         let cameraPlayer = cameraItem.map { transportFactory($0, true) }
-        let safeTime = EditorPlaybackClockPolicy.clampedTime(
-            initialTime ?? outputTime,
-            duration: prepared.outputDuration
-        )
-        _ = await player.seekTransport(
-            to: CMTime(seconds: safeTime, preferredTimescale: 60_000),
-            toleranceBefore: .zero,
-            toleranceAfter: .zero
-        )
-        if let cameraPlayer,
-           prepared.plan.camera?.contains(outputTime: safeTime) == true {
-            _ = await cameraPlayer.seekTransport(
-                to: CMTime(seconds: safeTime, preferredTimescale: 60_000),
-                toleranceBefore: .zero,
-                toleranceAfter: .zero
-            )
-        }
-        // A completed player seek does not guarantee that
-        // AVPlayerItemVideoOutput can vend the first pixel immediately. Decode
-        // one exact screen frame before exposing the new transport as ready;
-        // otherwise an immediate Space press can cancel the asynchronous
-        // paused decode and reveal CAMetalLayer's black fallback.
-        let initialFrameTime = CMTime(
-            seconds: safeTime,
-            preferredTimescale: 60_000
-        )
         let screenPreferredTransform = bundle.primaryVideoComposition == nil
             ? bundle.primaryVideoTrack.preferredTransform
             : .identity
         let cameraPreferredTransform = bundle.cameraVideoTrack?.preferredTransform ?? .identity
-        async let decodedFirstScreen = loadInitialFrame(
-            screenOutput,
-            initialFrameTime,
-            screenPreferredTransform
-        )
-        let firstCameraImage: NSImage?
-        if let cameraOutput,
-           prepared.plan.camera?.contains(outputTime: safeTime) == true {
-            firstCameraImage = await loadInitialFrame(
-                cameraOutput,
-                initialFrameTime,
-                cameraPreferredTransform
+        var pendingInitialTime = initialTime
+        var safeTime: TimeInterval = 0
+        var firstScreenImage: NSImage?
+        var firstCameraImage: NSImage?
+        while true {
+            let requestedSeek = seekToken
+            let requestedOutputTime = outputTime
+            let target = EditorPlaybackClockPolicy.clampedTime(
+                pendingInitialTime ?? requestedOutputTime,
+                duration: prepared.outputDuration
             )
-        } else {
-            firstCameraImage = nil
-        }
-        let firstScreenImage = await decodedFirstScreen
-        guard !Task.isCancelled, installToken == requestedInstall else {
-            player.pauseTransport()
-            cameraPlayer?.pauseTransport()
-            return
+            pendingInitialTime = nil
+            let initialFrameTime = CMTime(seconds: target, preferredTimescale: 60_000)
+            _ = await player.seekTransport(
+                to: initialFrameTime, toleranceBefore: .zero, toleranceAfter: .zero
+            )
+            if let cameraPlayer,
+               prepared.plan.camera?.contains(outputTime: target) == true {
+                _ = await cameraPlayer.seekTransport(
+                    to: initialFrameTime, toleranceBefore: .zero, toleranceAfter: .zero
+                )
+            }
+            guard !Task.isCancelled, installToken == requestedInstall else {
+                player.pauseTransport()
+                cameraPlayer?.pauseTransport()
+                return
+            }
+            if seekToken != requestedSeek
+                || abs(outputTime - requestedOutputTime) > 0.000_001 { continue }
+            // Keep first-frame protection, but a seek/Q/W during this await
+            // owns a newer logical playhead. Chase it instead of committing
+            // the earlier target back over the user's next edit.
+            async let decodedFirstScreen = loadInitialFrame(
+                screenOutput, initialFrameTime, screenPreferredTransform
+            )
+            let cameraImage: NSImage?
+            if let cameraOutput,
+               prepared.plan.camera?.contains(outputTime: target) == true {
+                cameraImage = await loadInitialFrame(
+                    cameraOutput, initialFrameTime, cameraPreferredTransform
+                )
+            } else {
+                cameraImage = nil
+            }
+            let screenImage = await decodedFirstScreen
+            guard !Task.isCancelled, installToken == requestedInstall else {
+                player.pauseTransport()
+                cameraPlayer?.pauseTransport()
+                return
+            }
+            if seekToken != requestedSeek
+                || abs(outputTime - requestedOutputTime) > 0.000_001 { continue }
+            safeTime = target
+            firstScreenImage = screenImage
+            firstCameraImage = cameraImage
+            break
         }
 
         // A ripple rebuild may have no camera pixel yet. Bridge only within
@@ -521,10 +530,17 @@ final class EditorPlaybackController: ObservableObject {
         // Swap the complete transport generation in one MainActor turn. The
         // old endpoints remain renderable until this exact point.
         removeObservers()
+        seekToken &+= 1
+        cameraSeekToken &+= 1
+        cameraSeekIsPending = false
+        cancelPausedFrameDecode()
         primaryPlayer?.pauseTransport()
         self.cameraPlayer?.pauseTransport()
+        primaryPlayer?.cancelPendingSeeks()
+        self.cameraPlayer?.cancelPendingSeeks()
         primaryPlayer = player
         self.cameraPlayer = cameraPlayer
+        primarySeekIsPending = false
         preparedMedia = prepared
         self.frameRate = max(frameRate, 1)
         cameraFrameRate = prepared.inventories.camera.videoFrameRate ?? 30
@@ -549,7 +565,11 @@ final class EditorPlaybackController: ObservableObject {
         if deferredPlaybackIntent {
             deferredPlaybackIntent = false
             startPlaybackFromCurrentPosition()
-        } else {
+        } else if firstScreenImage == nil
+            || (prepared.plan.camera?.contains(outputTime: safeTime) == true
+                && firstCameraImage == nil) {
+            // An exact first pair is already installed in the normal path.
+            // Do not immediately start two more full-composition decoders.
             refreshPausedFrames(at: safeTime)
         }
     }

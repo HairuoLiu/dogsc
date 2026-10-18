@@ -53,8 +53,7 @@ struct TimelineCompositionBundle {
         audio: AudioStyle,
         overrides: [UUID: PrimarySegmentAudioOverrides]
     ) -> [TimelineSegmentAudioMixRange] {
-        plan.timelineMap.segments.compactMap { segment in
-            guard let outputRange = segment.outputRange else { return nil }
+        plan.timelineMap.segments.map { segment in
             let segmentOverrides = overrides[segment.id]
                 ?? PrimarySegmentAudioOverrides()
             let systemIsMuted = segmentOverrides.isSystemMuted
@@ -70,14 +69,8 @@ struct TimelineCompositionBundle {
             return TimelineSegmentAudioMixRange(
                 segmentID: segment.id,
                 range: CMTimeRange(
-                    start: CMTime(
-                        seconds: outputRange.start,
-                        preferredTimescale: 60_000
-                    ),
-                    duration: CMTime(
-                        seconds: outputRange.duration,
-                        preferredTimescale: 60_000
-                    )
+                    start: Self.audioBoundary(segment.outputStart),
+                    end: Self.audioBoundary(segment.outputEnd)
                 ),
                 systemTrackVolume: Float(min(max(systemVolume, 0), 1)),
                 microphoneTrackVolume: Float(min(max(microphoneVolume, 0), 1))
@@ -85,6 +78,9 @@ struct TimelineCompositionBundle {
         }
     }
 
+    private static func audioBoundary(_ seconds: Double) -> CMTime {
+        CMTime(value: Int64((seconds * 1_000_000_000).rounded()), timescale: 1_000_000_000)
+    }
 }
 
 struct TimelineSegmentAudioMixRange: Equatable {
@@ -241,36 +237,28 @@ enum TimelineCompositionBuilder {
     ) -> AVAudioMix? {
         var parameters: [AVAudioMixInputParameters] = []
         if let systemTrack {
-            let input = AVMutableAudioMixInputParameters(track: systemTrack)
-            input.setVolume(systemVolume, at: .zero)
-            if !primarySegmentRanges.isEmpty {
-                for segment in primarySegmentRanges
-                    .filter({ $0.range.isValid && !$0.range.isEmpty })
-                    .sorted(by: { $0.range.start < $1.range.start }) {
-                    input.setVolumeRamp(
-                        fromStartVolume: segment.systemTrackVolume,
-                        toEndVolume: segment.systemTrackVolume,
-                        timeRange: segment.range
-                    )
+            let input = TimelineAudioGainProcessor.parameters(
+                track: systemTrack,
+                defaultGain: systemVolume,
+                spans: primarySegmentRanges.map {
+                    .init(start: $0.range.start.seconds, end: $0.range.end.seconds,
+                          gain: $0.systemTrackVolume)
                 }
-            }
+            )
             if requiresTimePitchProcessing {
                 input.audioTimePitchAlgorithm = timePitchAlgorithm
             }
             parameters.append(input)
         }
         if let microphoneTrack {
-            let input = AVMutableAudioMixInputParameters(track: microphoneTrack)
-            input.setVolume(microphoneVolume, at: .zero)
-            for segment in primarySegmentRanges
-                .filter({ $0.range.isValid && !$0.range.isEmpty })
-                .sorted(by: { $0.range.start < $1.range.start }) {
-                input.setVolumeRamp(
-                    fromStartVolume: segment.microphoneTrackVolume,
-                    toEndVolume: segment.microphoneTrackVolume,
-                    timeRange: segment.range
-                )
-            }
+            let input = TimelineAudioGainProcessor.parameters(
+                track: microphoneTrack,
+                defaultGain: microphoneVolume,
+                spans: primarySegmentRanges.map {
+                    .init(start: $0.range.start.seconds, end: $0.range.end.seconds,
+                          gain: $0.microphoneTrackVolume)
+                }
+            )
             if requiresTimePitchProcessing {
                 input.audioTimePitchAlgorithm = timePitchAlgorithm
             }
@@ -389,7 +377,7 @@ enum TimelinePreviewMediaError: LocalizedError {
     }
 }
 
-private struct LoadedTimelineTrack {
+struct LoadedTimelineTrack {
     /// Keep the source alive for as long as its track is used. Returning only
     /// the track from an async loader can make later composition insertion
     /// fail with AVFoundation -11800 / OSStatus -12780.
@@ -400,7 +388,55 @@ private struct LoadedTimelineTrack {
     let displaySize: CGSize?
 }
 
+/// Original assets and tracks stay alive across cut-only composition rebuilds.
+/// This cache belongs to the editor payload, never to a global URL-only cache.
+struct TimelinePreparedSourceTracks {
+    let screen: LoadedTimelineTrack
+    let systemAudio: LoadedTimelineTrack?
+    let camera: LoadedTimelineTrack?
+    let microphone: LoadedTimelineTrack?
+}
+
 enum TimelinePreviewCompositionLoader {
+    static func rebuild(
+        request: EditorMediaRequest,
+        reusing previous: EditorPreparedMediaPayload
+    ) throws -> EditorPreparedMediaPayload? {
+        guard let tracks = previous.sourceTracks,
+              let primaryRange = previous.inventories.source.videoTimeRange else { return nil }
+        let plan = try ProjectTimelineMediaPlan(
+            sourceSequence: request.sourceSequence,
+            mediaManifest: request.mediaManifest,
+            primaryVideoRange: primaryRange,
+            systemAudioRange: previous.inventories.source.audioTimeRange,
+            cameraRange: previous.inventories.camera.videoTimeRange,
+            microphoneRange: previous.inventories.microphone.audioTimeRange,
+            sourcePointerEvents: request.pointerEvents
+        )
+        let composition = try TimelineCompositionBuilder.build(
+            plan: plan,
+            primaryVideoTrack: tracks.screen.track,
+            primaryVideoRange: tracks.screen.timeRange,
+            primaryVideoPreferredTransform: tracks.screen.preferredTransform,
+            systemAudioTrack: tracks.systemAudio?.track,
+            systemAudioRange: tracks.systemAudio?.timeRange,
+            cameraTrack: tracks.camera?.track,
+            cameraRange: tracks.camera?.timeRange,
+            cameraPreferredTransform: tracks.camera?.preferredTransform ?? .identity,
+            microphoneTrack: tracks.microphone?.track,
+            microphoneRange: tracks.microphone?.timeRange
+        )
+        return EditorPreparedMediaPayload(
+            composition: composition,
+            inventories: previous.inventories,
+            sourceDisplaySize: previous.sourceDisplaySize,
+            cameraDisplaySize: previous.cameraDisplaySize,
+            cameraContentCrop: previous.cameraContentCrop,
+            cameraSource: previous.cameraSource,
+            sourceTracks: tracks
+        )
+    }
+
     static func prepare(
         request: EditorMediaRequest
     ) async throws -> EditorPreparedMediaPayload {
@@ -551,7 +587,13 @@ enum TimelinePreviewCompositionLoader {
                     timeRange: $0.timeRange,
                     preferredTransform: $0.preferredTransform
                 )
-            }
+            },
+            sourceTracks: TimelinePreparedSourceTracks(
+                screen: source,
+                systemAudio: sourceAudio,
+                camera: camera,
+                microphone: microphone
+            )
         )
     }
 

@@ -253,6 +253,8 @@ struct ExportSheet: View {
                         } icon: {
                             AppLineIcon(kind: exporter.isExporting ? .stop : .share, size: 16)
                         }
+                        // Balance the drawn icon's inset against the text edge.
+                        .padding(.trailing, 1)
                     }
                     .buttonStyle(EditorPrimaryPillButtonStyle())
                     .disabled(!exporter.isExporting && !canStartExport)

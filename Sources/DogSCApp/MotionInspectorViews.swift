@@ -821,6 +821,7 @@ struct CameraShapeIconPicker: View {
     let selection: CameraShape
     let onSelect: (CameraShape) -> Void
     @Namespace private var shapeSelection
+    @Environment(\.consolePalette) private var palette
 
     private func icon(for shape: CameraShape) -> String {
         switch shape {
@@ -842,7 +843,7 @@ struct CameraShapeIconPicker: View {
                     EditorSymbol(icon(for: shape), size: 17)
                         .font(.appUI(size: 13))
                         .foregroundStyle(
-                            isSelected ? EditorTheme.primaryText : Color.secondary
+                            isSelected ? (palette?.ink ?? EditorTheme.primaryText) : Color.secondary
                         )
                         .frame(maxWidth: .infinity)
                         .frame(height: 30)
