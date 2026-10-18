@@ -1,0 +1,66 @@
+name: 故障反馈
+description: 反馈 DogSC 使用过程中遇到的问题。
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请尽量一次反馈一个问题。版本号和实际问题为必填，其余选填；无法稳定复现也可以提交。
+
+  - type: input
+    id: version
+    attributes:
+      label: 软件版本号
+      description: 填写出现问题时使用的具体版本号。
+      placeholder: 例如 0.1.7
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: 问题发生在哪里
+      description: 可以描述所在的页面或正在进行的操作。
+      placeholder: 例如录制、重新录制、剪辑、导出、备忘录
+    validations:
+      required: false
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: 实际发生了什么
+      description: 描述你看到的现象；如果出现错误提示，可以直接贴出原文。
+      placeholder: 例如点击重新录制后，软件直接退出了。
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 你原本希望发生什么
+      description: 描述你预期的正常结果。
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 出错前做了哪些操作
+      description: 可以按步骤填写，也可以直接描述当时的过程。涉及录制时，可以补充录了多久、是否暂停、是否开启摄像头或麦克风。无法再次复现时，写出还能记得的过程即可。
+    validations:
+      required: false
+
+  - type: textarea
+    id: frequency-and-history
+    attributes:
+      label: 发生频率和历史情况
+      description: 例如只遇到一次、偶尔发生、每次都会；以前是否正常，是否在更新或重启后开始出现。
+    validations:
+      required: false
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: 截图、录屏、错误提示或日志
+      description: 有能说明问题的材料可以拖入或粘贴在这里，上传前请遮住私人信息。
+    validations:
+      required: false
