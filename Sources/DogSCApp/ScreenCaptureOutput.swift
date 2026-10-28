@@ -253,6 +253,7 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
         recordsSystemAudio: Bool,
         onTerminalFailure: @escaping (CaptureOutputTerminalEvent) -> Void
     ) throws {
+        appLog("CaptureOutput.init: url=\(outputURL.path), \(width)x\(height), codec=\(codec)", category: "CaptureOutput")
         self.run = run
         self.outputURL = outputURL
         self.targetFrameRate = frameRate
@@ -395,6 +396,7 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
             }
             writer.add(audioInput)
         }
+        appLog("CaptureOutput.init: writer configured with videoInput and audioInput successfully", category: "CaptureOutput")
         let message = "capture writer started size=\(width)x\(height) "
             + "qualityTarget=\(frameRate.rawValue)fps "
             + "codec=\(codec.rawValue) "
@@ -410,6 +412,9 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
         guard sampleBuffer.isValid else { return }
         switch outputType {
         case .screen:
+            if receivedFrameCount < 5 {
+                appLog("stream(didOutputSampleBuffer:screen): frame arrived, pts=\(sampleBuffer.presentationTimeStamp.seconds)", category: "CaptureOutput")
+            }
             guard videoIngress.claim() else { return }
             let receivedAt = Date()
             let retained = RetainedSampleBuffer(value: sampleBuffer)
@@ -533,12 +538,14 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
         if videoInput.append(adjustedBuffer) {
             deliveredFrameCount += 1
             if firstFrameWallTime == nil, let wallTime = deliveredWallTimeCandidate {
+                appLog("appendVideo: FIRST FRAME DELIVERED! wallTime=\(wallTime)", category: "CaptureOutput")
                 firstFrameWallTime = wallTime
                 let continuation = firstFrameContinuation
                 firstFrameContinuation = nil
                 continuation?.resume(returning: wallTime)
             }
         } else if writer.status == .failed || writer.error != nil {
+            appLog("appendVideo: FAILED to append frame! writerStatus=\(writer.status.rawValue), error=\(String(describing: writer.error))", level: "ERROR", category: "CaptureOutput")
             writerDroppedFrameCount += 1
             // 记录失败帧的元数据：SCK 区域采集可能交付尺寸/格式异常的帧。
             let frameWidth = adjustedBuffer.imageBuffer.flatMap {
@@ -939,17 +946,21 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
     }
 
     func waitForFirstFrame(timeout: TimeInterval = 5) async throws -> Date {
-        try await withCheckedThrowingContinuation { continuation in
+        appLog("waitForFirstFrame: entered with timeout=\(timeout)s", category: "CaptureOutput")
+        return try await withCheckedThrowingContinuation { continuation in
             writerQueue.async { [self] in
                 if let terminalError {
+                    appLog("waitForFirstFrame: terminalError already present: \(terminalError)", level: "ERROR", category: "CaptureOutput")
                     continuation.resume(throwing: terminalError)
                     return
                 }
                 if let firstFrameWallTime {
+                    appLog("waitForFirstFrame: firstFrameWallTime already available: \(firstFrameWallTime)", category: "CaptureOutput")
                     continuation.resume(returning: firstFrameWallTime)
                     return
                 }
                 guard firstFrameContinuation == nil else {
+                    appLog("waitForFirstFrame: already awaiting first frame", level: "WARN", category: "CaptureOutput")
                     continuation.resume(
                         throwing: ScreenRecorderError.recordingFailed("正在等待首帧")
                     )
@@ -959,6 +970,7 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
                 writerQueue.asyncAfter(deadline: .now() + timeout) { [self] in
                     guard let continuation = firstFrameContinuation else { return }
                     firstFrameContinuation = nil
+                    appLog("waitForFirstFrame: TIMEOUT after \(timeout)s! No frames received", level: "ERROR", category: "CaptureOutput")
                     continuation.resume(throwing: ScreenRecorderError.noFrames)
                 }
             }

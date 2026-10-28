@@ -611,6 +611,7 @@ final class AppModel: ObservableObject {
                         preparationLogger.notice("prepare: microphone track started")
                     }
                     recorderTransitionStage = .startingPrimaryCapture
+                    appLog("prepare: transitioning to startingPrimaryCapture", category: "AppModel")
                     if plan.configuration.source == .device {
                         try await deviceRecorder.start(
                             to: session.deviceRecordingURL,
@@ -626,16 +627,20 @@ final class AppModel: ObservableObject {
                             height: dimensions?.height
                         ))
                     } else {
+                        appLog("prepare: calling recorder.start(runID: \(run.id))...", category: "AppModel")
                         try await recorder.start(
                             runID: run.id, configuration: plan.configuration,
                             outputURL: session.recordingURL(relativePath: plan.primaryRecordingRelativePath)
                         )
+                        appLog("prepare: recorder.start returned successfully", category: "AppModel")
                         guard recordingRuns.isCurrent(run.id) else { return }
                         recordingRuns.markStarted(.screen, for: run.id)
                         if let error = recorder.terminalError(for: run.id) { throw error }
                     }
                     preparationLogger.notice("prepare: screen track started")
+                    appLog("prepare: screen track started successfully", category: "AppModel")
                 } catch {
+                    appLog("prepare: CAUGHT ERROR in primary capture: \(error)", level: "ERROR", category: "AppModel")
                     guard recordingRuns.isCurrent(run.id) else { return }
                     let startError = error
                     surfaceVisibilityTask?.cancel()
@@ -722,6 +727,7 @@ final class AppModel: ObservableObject {
                 preparationTask = nil
                 startRecoveryHeartbeat(session: session, runID: run.id, plan: plan)
             } catch {
+                appLog("prepare: GLOBAL PREPARATION FAILED with error: \(error)", level: "ERROR", category: "AppModel")
                 guard recordingRuns.isCurrent(run.id) else { return }
                 let message = appErrorDescription(error)
                 captureSetup.stopPresentation()
@@ -794,6 +800,7 @@ final class AppModel: ObservableObject {
                     currentRunID: recordingRuns.active?.id
                 )
             } catch {
+                appLog("prepare: GLOBAL PREPARATION FAILED with error: \(error)", level: "ERROR", category: "AppModel")
                 guard recordingRuns.isCurrent(run.id) else { return }
                 await recoverFromFinalizeFailure(
                     run: run,
@@ -846,6 +853,7 @@ final class AppModel: ObservableObject {
             } catch is CancellationError {
                 return
             } catch {
+                appLog("prepare: GLOBAL PREPARATION FAILED with error: \(error)", level: "ERROR", category: "AppModel")
                 guard recordingRuns.isCurrent(run.id) else { return }
                 await recoverFromFinalizeFailure(
                     run: run,
