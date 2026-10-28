@@ -239,7 +239,7 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
     /// pixel conversion lifts the midtones and produces the observed grey look.
     private static let captureVideoColorProperties: [String: String] = [
         AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-        AVVideoTransferFunctionKey: kCVImageBufferTransferFunction_sRGB as String,
+        AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
         AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
     ]
 

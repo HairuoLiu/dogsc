@@ -64,7 +64,7 @@ struct CoreImageFrameColorProfile: @unchecked Sendable {
     var avVideoColorProperties: [String: String] {
         [
             AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-            AVVideoTransferFunctionKey: kCVImageBufferTransferFunction_sRGB as String,
+            AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
             AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
         ]
     }
