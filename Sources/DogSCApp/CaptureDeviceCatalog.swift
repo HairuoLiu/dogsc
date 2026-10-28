@@ -212,11 +212,13 @@ enum CaptureDeviceCatalog {
             }
             return true
         }
-        if role == .microphone, let defaultMic = AVCaptureDevice.default(for: .audio), defaultMic.isConnected, !devices.contains(where: { $0.uniqueID == defaultMic.uniqueID }) {
-            devices.append(defaultMic)
+        if role == .microphone, let defaultMic = AVCaptureDevice.default(for: .audio), defaultMic.isConnected {
+            devices.removeAll(where: { $0.uniqueID == defaultMic.uniqueID })
+            devices.insert(defaultMic, at: 0)
         }
-        if role == .camera, let defaultCam = AVCaptureDevice.default(for: .video), defaultCam.isConnected, !devices.contains(where: { $0.uniqueID == defaultCam.uniqueID }) {
-            devices.append(defaultCam)
+        if role == .camera, let defaultCam = AVCaptureDevice.default(for: .video), defaultCam.isConnected {
+            devices.removeAll(where: { $0.uniqueID == defaultCam.uniqueID })
+            devices.insert(defaultCam, at: 0)
         }
         return devices
     }
