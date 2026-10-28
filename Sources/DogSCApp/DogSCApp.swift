@@ -60,7 +60,10 @@ private struct DogSCSettingsScene: Scene {
         // The normal app owns no SwiftUI-created main window. A dedicated
         // RecorderPanelController presents the compact recorder surface, while
         // EditorWindowController continues to own the full editor window.
-        Settings { AppSettingsView() }
+        Settings {
+            AppSettingsView()
+                .environment(\.locale, AppLocalization.shared.locale)
+        }
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button(appLocalized("设置…")) {
@@ -82,7 +85,6 @@ private struct DogSCSettingsScene: Scene {
                 }
             }
         }
-        .environment(\.locale, AppLocalization.shared.locale)
     }
 
 }

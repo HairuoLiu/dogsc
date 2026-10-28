@@ -424,8 +424,6 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
                 guard !isFinishing, terminalError == nil else { return }
                 appendAudio(retained.value)
             }
-        case .microphone:
-            break
         @unknown default:
             break
         }
