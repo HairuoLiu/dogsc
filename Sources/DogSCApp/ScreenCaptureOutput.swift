@@ -322,10 +322,12 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
                 // Keep hardware real-time encoding, but make visual quality a
                 // first-class rate-control constraint instead of hoping that a
                 // high soft bitrate target will be consumed.
-                compression[
-                    kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality
-                        as String
-                ] = false
+                if #available(macOS 14.0, *) {
+                    compression[
+                        kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality
+                            as String
+                    ] = false
+                }
                 if #available(macOS 27.0, *) {
                     // Unlike the older generic Quality hint, CQF is explicitly
                     // defined to maintain consistent visual quality across
@@ -564,7 +566,10 @@ final class CaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
     }
 
     private func isCompleteScreenFrame(_ sampleBuffer: CMSampleBuffer) -> Bool {
-        ScreenCaptureFrameMetadata.status(of: sampleBuffer) == .complete
+        guard let status = ScreenCaptureFrameMetadata.status(of: sampleBuffer) else {
+            return CMSampleBufferGetImageBuffer(sampleBuffer) != nil
+        }
+        return status == .complete
     }
 
     private func applyCaptureColorAttachments(to pixelBuffer: CVPixelBuffer) {
