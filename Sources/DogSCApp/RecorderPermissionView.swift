@@ -116,7 +116,7 @@ final class ApplicationBundleDragView: NSView, NSDraggingSource {
             operation: .sourceOver,
             fraction: 1,
             respectFlipped: true,
-            hints: [.interpolation: NSImageInterpolation.high]
+            hints: nil
         )
     }
 
