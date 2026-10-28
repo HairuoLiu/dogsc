@@ -110,7 +110,9 @@ final class MicrophoneRecorder: NSObject,
     }
 
     func startMonitoring(deviceUniqueID: String? = nil) async throws {
+        appLog("MicrophoneRecorder.startMonitoring: deviceID=\(deviceUniqueID ?? "default")", category: "Microphone")
         guard await requestPermission() else {
+            appLog("MicrophoneRecorder.startMonitoring: permission DENIED", level: "ERROR", category: "Microphone")
             throw MicrophoneRecorderError.permissionDenied
         }
         try Task.checkCancellation()
@@ -137,8 +139,10 @@ final class MicrophoneRecorder: NSObject,
                         }
                         activity = .livePreview(requestID)
                         if !session.isRunning { session.startRunning() }
+                        appLog("MicrophoneRecorder.startMonitoring: session running successfully", category: "Microphone")
                         continuation.resume()
                     } catch {
+                        appLog("MicrophoneRecorder.startMonitoring: FAILED with error: \(error)", level: "ERROR", category: "Microphone")
                         continuation.resume(throwing: error)
                     }
                 }
